@@ -287,6 +287,17 @@ with st.sidebar:
     
     # Selector de ruta de biblioteca
     st.subheader("📂 Ubicación de la Biblioteca")
+    
+    # Verificar si ya está indexada
+    if st.session_state.indexed_files > 0:
+        st.success(f"✅ Biblioteca indexada: {st.session_state.indexed_files} archivos")
+        if st.button("🔄 Re-indexar Biblioteca", type="secondary"):
+            st.session_state.knowledge_base = None
+            st.session_state.indexed_files = 0
+            st.rerun()
+    else:
+        st.info("ℹ️ Primero necesitas indexar la biblioteca para poder hacer consultas")
+    
     # Intentar detectar la ruta automáticamente
     try:
         repo_root = SCRIPT_DIR.parent
@@ -295,32 +306,55 @@ with st.sidebar:
         # O en el directorio padre (si está en local)
         if (repo_root / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
             default_path = str(repo_root)
+            st.success("✅ Biblioteca detectada automáticamente en el repositorio")
         elif (repo_root.parent / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
             default_path = str(repo_root.parent)
+            st.success("✅ Biblioteca detectada automáticamente")
         else:
             # Ruta por defecto vacía (el usuario la ingresará)
             default_path = ""
+            st.warning("⚠️ No se detectó la biblioteca. Ingresa la ruta manualmente.")
     except Exception as e:
         default_path = ""
     
     library_path = st.text_input(
         "Ruta de la biblioteca:",
         value=default_path,
-        help="Ruta donde está ubicada la biblioteca W2M (debe contener BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt)"
+        help="Ruta donde está ubicada la biblioteca W2M. Debe contener el archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt"
     )
     
-    if st.button("🔄 Indexar Biblioteca", type="primary"):
-        with st.spinner("Indexando biblioteca..."):
-            try:
-                kb, count = index_library(library_path)
-                st.session_state.knowledge_base = kb
-                st.session_state.indexed_files = count
-                st.success(f"✅ Biblioteca indexada: {count} archivos")
-            except Exception as e:
-                st.error(f"Error al indexar: {str(e)}")
+    # Mostrar instrucciones si no hay ruta
+    if not library_path:
+        with st.expander("📖 ¿Cómo obtener la ruta de la biblioteca?"):
+            st.markdown("""
+            **Opción 1: Si la biblioteca está en el repositorio**
+            - No necesitas hacer nada, se detectará automáticamente
+            
+            **Opción 2: Si la biblioteca está en tu computadora (Windows)**
+            - Copia la ruta completa, por ejemplo:
+            - `C:\\Users\\sjaro\\OneDrive\\W2M\\03 Biblioteca`
+            
+            **Opción 3: Si la biblioteca está en OneDrive/Compartida**
+            - Usa la ruta completa de la carpeta compartida
+            - Asegúrate de que Streamlit Cloud pueda acceder a ella
+            """)
     
-    if st.session_state.indexed_files > 0:
-        st.info(f"📊 Archivos indexados: {st.session_state.indexed_files}")
+    if st.button("🔄 Indexar Biblioteca", type="primary", disabled=not library_path):
+        if not library_path:
+            st.error("❌ Por favor, ingresa una ruta de biblioteca")
+        else:
+            with st.spinner("Indexando biblioteca... Esto puede tardar unos segundos"):
+                try:
+                    kb, count = index_library(library_path)
+                    st.session_state.knowledge_base = kb
+                    st.session_state.indexed_files = count
+                    st.success(f"✅ Biblioteca indexada correctamente: {count} archivos")
+                    st.balloons()  # Animación de celebración
+                    st.rerun()  # Recargar para mostrar el estado actualizado
+                except FileNotFoundError as e:
+                    st.error(f"❌ No se encontró la ruta: {str(e)}\n\nVerifica que la ruta sea correcta y que contenga el archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt")
+                except Exception as e:
+                    st.error(f"❌ Error al indexar: {str(e)}")
     
     st.markdown("---")
     st.subheader("💡 Preguntas Sugeridas")
@@ -359,7 +393,16 @@ if query:
     
     # Buscar respuesta
     if st.session_state.knowledge_base is None:
-        response = "⚠️ Por favor, indexa la biblioteca primero usando el botón en la barra lateral."
+        response = """⚠️ **La biblioteca no está indexada aún.**
+
+Para poder hacer consultas, primero necesitas:
+
+1. **Ir a la barra lateral** (← izquierda)
+2. **Ingresar la ruta de la biblioteca** (o usar la detectada automáticamente)
+3. **Click en "🔄 Indexar Biblioteca"**
+4. **Esperar a que termine la indexación**
+
+Una vez indexada, podrás hacer todas las consultas que quieras. 🚀"""
         results = []
     else:
         with st.spinner("Buscando en la biblioteca..."):
