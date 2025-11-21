@@ -63,7 +63,7 @@ def index_library(base_path: str) -> Tuple[Dict, int]:
     
     # Verificar que la ruta existe
     if not base.exists():
-        raise FileNotFoundError(f"La ruta {base_path} no existe")
+        raise FileNotFoundError(f"La ruta '{base_path}' no existe. Verifica que sea correcta.")
     
     # Archivo principal - BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt (muy importante)
     main_file = base / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt'
@@ -417,22 +417,37 @@ with st.sidebar:
         - Debe estar en la carpeta que indiques en la ruta
         """)
     
-    if st.button("🔄 Indexar Biblioteca", type="primary", disabled=not library_path):
-        if not library_path:
-            st.error("❌ Por favor, ingresa una ruta de biblioteca")
+    # Botón de indexación - siempre habilitado para mejor feedback
+    if st.button("🔄 Indexar Biblioteca", type="primary"):
+        if not library_path or library_path.strip() == "":
+            st.error("❌ Por favor, ingresa una ruta de biblioteca en el campo de arriba")
         else:
             with st.spinner("Indexando biblioteca... Esto puede tardar unos segundos"):
                 try:
-                    kb, count = index_library(library_path)
-                    st.session_state.knowledge_base = kb
-                    st.session_state.indexed_files = count
-                    st.success(f"✅ Biblioteca indexada correctamente: {count} archivos")
-                    st.balloons()  # Animación de celebración
-                    st.rerun()  # Recargar para mostrar el estado actualizado
+                    # Validar que la ruta existe
+                    path_obj = Path(library_path)
+                    if not path_obj.exists():
+                        st.error(f"❌ La ruta no existe: `{library_path}`\n\n**Sugerencias:**\n- Verifica que la ruta sea correcta\n- En Streamlit Cloud, prueba: `/mount/src`\n- Asegúrate de que el archivo esté en esa ubicación")
+                    else:
+                        # Verificar que el archivo principal existe
+                        main_file = path_obj / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt'
+                        if not main_file.exists():
+                            st.warning(f"⚠️ No se encontró el archivo `BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt` en: `{library_path}`\n\n**Verifica:**\n- Que el archivo esté en la raíz del repositorio\n- Que el nombre sea exactamente: `BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt`")
+                        else:
+                            # Indexar
+                            kb, count = index_library(library_path)
+                            st.session_state.knowledge_base = kb
+                            st.session_state.indexed_files = count
+                            st.success(f"✅ Biblioteca indexada correctamente: {count} archivos")
+                            st.balloons()  # Animación de celebración
+                            st.rerun()  # Recargar para mostrar el estado actualizado
                 except FileNotFoundError as e:
-                    st.error(f"❌ No se encontró la ruta: {str(e)}\n\nVerifica que la ruta sea correcta y que contenga el archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt")
+                    st.error(f"❌ No se encontró la ruta: {str(e)}\n\n**Sugerencias:**\n- Verifica que la ruta sea correcta\n- En Streamlit Cloud, prueba: `/mount/src`")
                 except Exception as e:
-                    st.error(f"❌ Error al indexar: {str(e)}")
+                    st.error(f"❌ Error al indexar: {str(e)}\n\n**Detalles del error:**\n{type(e).__name__}")
+                    import traceback
+                    with st.expander("🔍 Ver detalles técnicos del error"):
+                        st.code(traceback.format_exc())
     
     st.markdown("---")
     st.subheader("💡 Preguntas Sugeridas")
