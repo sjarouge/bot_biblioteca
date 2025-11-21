@@ -1,4 +1,3 @@
-   ```toml
    [theme]
    primaryColor = "#1f77b4"
    backgroundColor = "#ffffff"
@@ -9,4 +8,3 @@
    [server]
    headless = true
    port = 8501
-   ```
