@@ -5,11 +5,18 @@ Desarrollado para W2M - Santiago Jarouge
 
 import streamlit as st
 import os
-import re
+import sys
 from pathlib import Path
 from typing import List, Dict, Tuple
-import json
-from datetime import datetime
+
+# Manejo seguro de __file__ para Streamlit Cloud
+try:
+    if __file__:
+        SCRIPT_DIR = Path(__file__).parent.absolute()
+    else:
+        SCRIPT_DIR = Path.cwd() / 'bot_biblioteca'
+except:
+    SCRIPT_DIR = Path.cwd() / 'bot_biblioteca'
 
 # Configuración de la página
 st.set_page_config(
@@ -281,18 +288,20 @@ with st.sidebar:
     # Selector de ruta de biblioteca
     st.subheader("📂 Ubicación de la Biblioteca")
     # Intentar detectar la ruta automáticamente
-    script_dir = Path(__file__).parent.absolute()
-    repo_root = script_dir.parent
-    
-    # Buscar biblioteca en el mismo repositorio (si está subida)
-    # O en el directorio padre (si está en local)
-    if (repo_root / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
-        default_path = str(repo_root)
-    elif (repo_root.parent / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
-        default_path = str(repo_root.parent)
-    else:
-        # Ruta por defecto (Windows típico)
-        default_path = r"C:\Users\sjaro\OneDrive\W2M\03 Biblioteca"
+    try:
+        repo_root = SCRIPT_DIR.parent
+        
+        # Buscar biblioteca en el mismo repositorio (si está subida)
+        # O en el directorio padre (si está en local)
+        if (repo_root / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
+            default_path = str(repo_root)
+        elif (repo_root.parent / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
+            default_path = str(repo_root.parent)
+        else:
+            # Ruta por defecto vacía (el usuario la ingresará)
+            default_path = ""
+    except Exception as e:
+        default_path = ""
     
     library_path = st.text_input(
         "Ruta de la biblioteca:",
@@ -315,8 +324,10 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("💡 Preguntas Sugeridas")
-    for question in get_suggested_questions():
-        if st.button(question, key=f"suggest_{hash(question)}", use_container_width=True):
+    questions = get_suggested_questions()
+    for idx, question in enumerate(questions):
+        # Usar índice en lugar de hash para evitar problemas
+        if st.button(question, key=f"suggest_{idx}", use_container_width=True):
             st.session_state.current_query = question
     
     st.markdown("---")
@@ -349,10 +360,15 @@ if query:
     # Buscar respuesta
     if st.session_state.knowledge_base is None:
         response = "⚠️ Por favor, indexa la biblioteca primero usando el botón en la barra lateral."
+        results = []
     else:
         with st.spinner("Buscando en la biblioteca..."):
-            results = search_in_content(query, st.session_state.knowledge_base)
-            response = format_response(query, results)
+            try:
+                results = search_in_content(query, st.session_state.knowledge_base)
+                response = format_response(query, results)
+            except Exception as e:
+                response = f"❌ Error al buscar: {str(e)}"
+                results = []
     
     # Mostrar respuesta
     with st.chat_message("assistant"):
@@ -362,7 +378,7 @@ if query:
     st.session_state.chat_history.append({"role": "assistant", "content": response})
     
     # Mostrar detalles de resultados si hay
-    if st.session_state.knowledge_base and results:
+    if st.session_state.knowledge_base and 'results' in locals() and results:
         with st.expander("📋 Ver detalles de resultados"):
             for i, result in enumerate(results[:3], 1):
                 st.markdown(f"### Resultado {i}")
