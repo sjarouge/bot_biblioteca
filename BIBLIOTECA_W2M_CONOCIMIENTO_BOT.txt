@@ -1,0 +1,474 @@
+BIBLIOTECA W2M - BASE DE CONOCIMIENTO PARA BOT COPILOT
+===========================================================
+
+INFORMACION GENERAL DE LA BIBLIOTECA
+====================================
+Desarrollador: Santiago Jarouge
+Cliente: W2M
+Total de Programas: 80+ programas ABAP
+Fecha Actualizacion: 28/01/2025
+Organizacion: Por funcionalidad y paquetes SAP
+
+ESTRUCTURA PRINCIPAL DE LA BIBLIOTECA
+=====================================
+
+01_PROGRAMAS_PRINCIPALES/
+-------------------------
+Programas principales organizados por modulo funcional
+
+FI_FINANZAS/ (Modulo Financiero)
+- Contabilizacion/: Programas de contabilizacion automatica
+- Facturas_y_Abonos/: Procesamiento de facturas y abonos
+  * zfi_enviable/ - Gestion de documentos enviables
+  * zfi_enviable_upd/ - Actualizacion de documentos enviables
+  * zfi_mod_fact/ - Modificacion de facturas
+- Formularios/: Configuracion de formularios e impresion
+  * zfi_form_confi/ - Configuracion de formularios
+  * zfi_form_logo/ - Gestion de logos en formularios
+- Pagos/: Gestion de pagos y transferencias
+  * zfi_bp_envio/ - Envio de business partners
+  * zfi_payments_xml/ - Procesamiento de pagos XML
+- Otros programas FI/:
+  * zfi_bb_file/ - Gestion de archivos BlueBay
+  * ZFI_TRASPASO_GL_HOTEL/ - Traspaso GL para hoteles
+  * zfi_i337_cd/ - Procesamiento I337
+  * zfi_i337_log/ - Log I337
+  * zfi_imprimir_pdf/ - Impresion de PDFs
+  * zfi_inven_log/ - Log de inventario
+  * zfi_voxel_cd/ - Procesamiento Voxel
+  * zfi_voxel_log/ - Log Voxel
+
+UT_UTILIDADES/ (Utilidades Generales)
+- zarr00171/ - Utilidad general 171
+- zarr00172/ - Utilidad general 172
+- zarr00173/ - Utilidad general 173
+- zutr00024/ - Utilidad de transporte 024
+- zutr00025/ - Utilidad de transporte 025
+
+02_REPORTS/
+-----------
+Reports y listados (programas ZFIR)
+- zfir00412_fix/ - Report 412 (version corregida)
+- zfir00425/ - Report 425
+- zfir00426/ - Report 426 (Facturacion PUJ Limite 250k DOP)
+- zfir00427/ - Report 427 (Facturacion PUJ Reporting)
+- zfir00428/ - Report 428
+- zfir00431/ - Report 431
+- zfir00432/ - Report 432
+- zfir00433/ - Report 433
+- zfir00434/ - Report 434
+- zfir00435/ - Report 435
+- zfir00436/ - Report 436
+- zfir00437/ - Report 437
+- zfir00438/ - Report 438
+- zfir00439/ - Report 439
+- zfir00441/ - Report 441
+- zfir00442/ - Report 442 (Facturacion Agrupada)
+- zfir00443/ - Report 443 (Facturacion Agrupada Reporting)
+- zfir00444/ - Report 444
+- zfir00491/ - Report 491
+- zfir01141/ - Report 1141
+- zfir02162/ - Report 2162
+
+03_CLASES_Y_FUNCIONES/
+----------------------
+Clases ABAP, modulos de funcion e includes reutilizables
+
+CLASES EXCEL (IMPLEMENTADAS):
+- ZCL_EXCEL - Clase principal del libro Excel
+- ZCL_EXCEL_WORKSHEET - Gestion de hojas de calculo
+- ZCL_EXCEL_WORKSHEETS - Coleccion de hojas
+- ZCL_EXCEL_STYLE_CHANGER - Modificador avanzado de estilos
+- ZCL_EXCEL_COMMON - Utilidades comunes
+- ZCL_EXCEL_CONVERTER - Convertidor de datos
+- ZCL_EXCEL_GRAPH_BARS - Graficos de barras
+- ZCL_EXCEL_GRAPH_LINE - Graficos de lineas
+- ZCL_EXCEL_GRAPH_PIE - Graficos circulares
+- ZCL_EXCEL_AUTOFILTER - Filtros automaticos
+- ZCL_EXCEL_DATA_VALIDATION - Validacion de datos
+- ZCL_EXCEL_STYLE_* - Familia completa de estilos
+- ZIF_EXCEL_* - Interfaces Excel (7 interfaces)
+Total: 56 clases + 7 interfaces Excel implementadas
+
+CLASES PLANIFICADAS (Por implementar):
+Business_Logic/:
+- ZCL_FI_INVOICE_SERVICE - Servicio de procesamiento de facturas
+- ZCL_FI_PAYMENT_PROCESSOR - Procesador de pagos
+- ZCL_FI_DOCUMENT_MANAGER - Gestor de documentos financieros
+- ZCL_FI_ACCOUNTING_SERVICE - Servicio de contabilizacion
+- ZCL_FI_VALIDATION_ENGINE - Motor de validaciones FI
+
+Data_Access/:
+- ZCL_FI_INVOICE_DAO - Acceso a datos de facturas
+- ZCL_FI_PAYMENT_DAO - Acceso a datos de pagos
+- ZCL_AZURE_GATEWAY - Gateway para Azure
+- ZCL_BLUEBAY_ADAPTER - Adaptador para BlueBay
+- ZCL_FTP_CONNECTOR - Conector FTP
+
+Service_Classes/:
+- ZCL_FI_INTEGRATION_SERVICE - Servicio de integracion FI
+- ZCL_FI_REPORTING_SERVICE - Servicio de reportes
+- ZCL_FI_CALCULATION_SERVICE - Servicio de calculos
+
+Utilities/:
+- ZCL_UT_STRING_HELPER - Utilidades de cadenas
+- ZCL_UT_DATE_CALCULATOR - Calculadora de fechas
+- ZCL_UT_FILE_PROCESSOR - Procesador de archivos
+- ZCL_UT_XML_PARSER - Parser de XML
+
+05_INTERFACES_Y_WEBSERVICES/
+----------------------------
+Interfaces y servicios web
+
+AZURE/:
+- ZFI_AZURE_PDF_UPLOAD/ - Subida de PDFs a Azure
+
+BLUEBAY/:
+- zfi_bluebay_get/ - Obtencion de datos BlueBay
+- zfi_bluebay_proc/ - Procesamiento BlueBay
+
+FTP/:
+- zfi_ftp_item/ - Gestion de items FTP
+- zfi_ftp_lista/ - Listado FTP
+- zfi_ftp_mail/ - Envio de emails FTP
+- zfi_ftp_read/ - Lectura FTP
+
+WEBSERVICES_EXTERNOS/:
+- zfi_guest_ws_get/ - WebService GET para huespedes
+- zfi_guest_ws_post/ - WebService POST para huespedes
+- zfi_guitart_ws_get/ - WebService GET Guitart
+- zfi_guitart_ws_post/ - WebService POST Guitart
+- zfi_ws_get/ - WebService GET generico
+
+INTERFACES_GENERALES/:
+- zfii00301/ - Interface 301
+
+06_MONITORES_Y_JOBS/
+--------------------
+Monitores y jobs de procesamiento
+
+JOBS_PROCESAMIENTO/:
+- zfi_faven_log/ - Log de procesamiento FAVEN
+- zfi_procesa_log/ - Log de procesamiento general
+
+MONITORES_FI/:
+- zfi_monitor_0002/ - Monitor financiero 0002
+- zfi_monitor_0003/ - Monitor financiero 0003
+- zfi_monitor_0004/ - Monitor financiero 0004
+
+PAQUETES_SAP/
+=============
+Organizacion por paquetes SAP
+
+ZFI_W2M/ (Paquete Principal Financiero)
+- ZFI_INVOICE/ - Subpaquete de facturacion
+- ZFI_PAYMENT/ - Subpaquete de pagos
+- ZFI_ACCOUNTING/ - Subpaquete de contabilizacion
+- ZFI_FORMS/ - Subpaquete de formularios
+- ZFI_MONITOR/ - Subpaquete de monitores
+- ZFI_ECOMMERCE/ - Subpaquete de comercio electronico
+  * ZFI_DOM_DOMINICANA/ - Proyecto Republica Dominicana
+
+ZIN_W2M/ (Paquete de Interfaces)
+- ZIN_AZURE/ - Subpaquete Azure
+- ZIN_BLUEBAY/ - Subpaquete BlueBay
+- ZIN_FTP/ - Subpaquete FTP
+- ZIN_WEBSERVICES/ - Subpaquete WebServices
+- ZIN_INTERFACES/ - Subpaquete interfaces generales
+
+ZUT_W2M/ (Paquete de Utilidades)
+- ZUT_GENERAL/ - Utilidades generales
+- ZUT_TRANSPORT/ - Utilidades de transporte
+- ZUT_EXCEL/ - Utilidades Excel
+- ZUT_DEVELOPMENT/ - Utilidades de desarrollo
+
+ZRP_W2M/ (Paquete de Reports)
+- ZRP_FINANCIAL/ - Reports financieros
+- ZRP_OPERATIONAL/ - Reports operacionales
+- ZRP_AUDIT/ - Reports de auditoria
+
+ZCL_W2M/ (Paquete de Clases)
+- ZCL_BUSINESS/ - Clases de negocio
+- ZCL_DATA/ - Clases de datos
+- ZCL_SERVICE/ - Clases de servicio
+- ZCL_UTILITY/ - Clases utilitarias
+- ZCL_FRAMEWORK/ - Clases de framework
+
+PROYECTO ESPECIAL: ZFI_DOM - REPUBLICA DOMINICANA
+=================================================
+Proyecto de facturacion electronica para Republica Dominicana
+Ubicacion: PAQUETES_SAP/ZFI_W2M/ZFI_ECOMMERCE/ZFI_DOM_DOMINICANA/
+
+PROGRAMAS DEL PROYECTO DOMINICANA:
+1. ZFIR00426 - Facturacion PUJ Limite 250k DOP
+   - Tipo: Report Principal de Facturacion
+   - Funcion: Procesamiento de facturas PUJ con limite fiscal de 250,000 DOP
+   - Complejidad: Media (4 dictionary objects)
+   - Criticidad: Alta
+
+2. ZFIR00427 - Facturacion PUJ Reporting
+   - Tipo: Report de Analisis y Estadisticas
+   - Funcion: Analisis y reporting complementario de facturacion PUJ
+   - Complejidad: Baja (1 dictionary object)
+   - Criticidad: Media
+
+3. ZFIR00442 - Facturacion Agrupada
+   - Tipo: Report de Procesamiento Avanzado
+   - Funcion: Optimizacion fiscal mediante agrupacion inteligente de facturas
+   - Complejidad: Alta (8 dictionary objects)
+   - Criticidad: Alta
+
+4. ZFIR00443 - Facturacion Agrupada Reporting
+   - Tipo: Report de Analisis Agrupado
+   - Funcion: Analisis y reporting de facturacion agrupada
+   - Complejidad: Baja (1 dictionary object)
+   - Criticidad: Media
+
+5. ZFIR00445 - Generacion XML Dominicana *** CRITICO ***
+   - Tipo: Generador de XML Fiscal
+   - Funcion: Genera ficheros XML para cumplimiento normativo DGII
+   - Complejidad: Muy Alta (3 function modules + 1 screen)
+   - Criticidad: CRITICA
+   - Integracion: FactureHoy (plataforma dominicana)
+   - Control: Fecha limite 3 de cada mes
+   - Function Modules:
+     * z_grabar_fichero_serv - Grabacion en servidor
+     * z_obtener_rutas_int_salida - Rutas productivas
+     * z_obtener_rutas_int_test - Rutas de prueba
+
+6. ZFIR00446 - Apertura Periodos Dominicana
+   - Tipo: Transaccion de Gestion Fiscal
+   - Funcion: Gestion y apertura de periodos fiscales dominicanos
+   - Complejidad: Media (2 dictionary objects + 1 screen)
+   - Criticidad: Alta
+
+7. ZFIR00447 - Procesamiento Especializado
+   - Tipo: Report de Procesamiento
+   - Funcion: Procesamiento especializado (requiere analisis detallado)
+   - Complejidad: Media (2 dictionary objects + 1 function module)
+   - Criticidad: Media
+
+8. ZFIR00448 - Monitor Ficheros XML
+   - Tipo: Monitor de Archivos XML
+   - Funcion: Monitoreo y auditoria de ficheros XML generados
+   - Complejidad: Alta (4 dictionary objects + 2 screens)
+   - Criticidad: Alta
+
+9. ZFIR00449 - Report Complementario
+   - Tipo: Report Simple
+   - Funcion: Report complementario (requiere analisis)
+   - Complejidad: Baja (1 dictionary object)
+   - Criticidad: Baja
+
+10. ZFIR00451 - Procesamiento de Conversion
+    - Tipo: Report de Procesamiento
+    - Funcion: Conversion de formatos VX a DOM
+    - Complejidad: Media (2 dictionary objects)
+    - Criticidad: Media
+
+11. ZFIR00452 - Report Basico
+    - Tipo: Report Simple
+    - Funcion: Funcionalidad basica (requiere analisis)
+    - Complejidad: Muy Baja
+    - Criticidad: Baja
+
+12. ZFIR00453 - Report de Archivos
+    - Tipo: Report de Gestion de Archivos
+    - Funcion: Gestion de archivos dominicanos
+    - Complejidad: Baja (1 dictionary object)
+    - Criticidad: Baja
+
+CONVENCIONES DE NOMENCLATURA
+============================
+
+PREFIJOS DE PROGRAMAS:
+- ZFI_: Finanzas
+- ZFIR: Reports de Finanzas
+- ZFII: Interfaces de Finanzas
+- ZARR: Utilidades generales
+- ZUTR: Utilidades de transporte
+- ZCL_: Clases ABAP
+- ZIF_: Interfaces ABAP
+- ZCX_: Excepciones ABAP
+
+SUFIJOS COMUNES:
+- _GET: Obtencion de datos
+- _POST: Envio de datos
+- _PROC: Procesamiento
+- _LOG: Logging
+- _MON: Monitor
+- _SERVICE: Servicios
+- _DAO: Acceso a datos
+- _MODEL: Modelos de datos
+- _HELPER: Utilidades auxiliares
+- _FACTORY: Fabricas de objetos
+
+FUNCIONALIDADES PRINCIPALES POR PROGRAMA
+========================================
+
+GESTION DE FACTURAS:
+- zfi_enviable/ - Gestion de documentos enviables
+- zfi_enviable_upd/ - Actualizacion de documentos enviables
+- zfi_mod_fact/ - Modificacion de facturas
+- ZFIR00426 - Facturacion PUJ Limite 250k DOP
+- ZFIR00442 - Facturacion Agrupada
+- ZCL_FI_INVOICE_SERVICE - Servicio de procesamiento de facturas (planificado)
+
+GESTION DE PAGOS:
+- zfi_bp_envio/ - Envio de business partners
+- zfi_payments_xml/ - Procesamiento de pagos XML
+- ZCL_FI_PAYMENT_PROCESSOR - Procesador de pagos (planificado)
+
+INTEGRACIONES AZURE:
+- ZFI_AZURE_PDF_UPLOAD/ - Subida de PDFs a Azure
+- ZCL_AZURE_GATEWAY - Gateway para Azure (planificado)
+
+INTEGRACIONES BLUEBAY:
+- zfi_bluebay_get/ - Obtencion de datos BlueBay
+- zfi_bluebay_proc/ - Procesamiento BlueBay
+- zfi_bb_file/ - Gestion de archivos BlueBay
+- ZCL_BLUEBAY_ADAPTER - Adaptador para BlueBay (planificado)
+
+GESTION FTP:
+- zfi_ftp_item/ - Gestion de items FTP
+- zfi_ftp_lista/ - Listado FTP
+- zfi_ftp_mail/ - Envio de emails FTP
+- zfi_ftp_read/ - Lectura FTP
+- ZCL_FTP_CONNECTOR - Conector FTP (planificado)
+
+WEBSERVICES:
+- zfi_guest_ws_get/ - WebService GET para huespedes
+- zfi_guest_ws_post/ - WebService POST para huespedes
+- zfi_guitart_ws_get/ - WebService GET Guitart
+- zfi_guitart_ws_post/ - WebService POST Guitart
+- zfi_ws_get/ - WebService GET generico
+
+PROCESAMIENTO EXCEL:
+- Libreria completa de 56 clases Excel implementadas
+- ZCL_EXCEL - Clase principal
+- ZCL_EXCEL_WORKSHEET - Gestion de hojas
+- ZCL_EXCEL_STYLE_* - Estilos
+- ZCL_EXCEL_GRAPH_* - Graficos
+- ZCL_EXCEL_AUTOFILTER - Filtros
+- ZCL_EXCEL_DATA_VALIDATION - Validaciones
+
+MONITOREO Y LOGS:
+- zfi_faven_log/ - Log de procesamiento FAVEN
+- zfi_procesa_log/ - Log de procesamiento general
+- zfi_i337_log/ - Log I337
+- zfi_inven_log/ - Log de inventario
+- zfi_voxel_log/ - Log Voxel
+- zfi_monitor_0002/ - Monitor financiero 0002
+- zfi_monitor_0003/ - Monitor financiero 0003
+- zfi_monitor_0004/ - Monitor financiero 0004
+
+FORMULARIOS E IMPRESION:
+- zfi_form_confi/ - Configuracion de formularios
+- zfi_form_logo/ - Gestion de logos en formularios
+- zfi_imprimir_pdf/ - Impresion de PDFs
+
+UTILIDADES GENERALES:
+- zarr00171/ - Utilidad general 171
+- zarr00172/ - Utilidad general 172
+- zarr00173/ - Utilidad general 173
+- zutr00024/ - Utilidad de transporte 024
+- zutr00025/ - Utilidad de transporte 025
+
+ESTADISTICAS DE LA BIBLIOTECA
+=============================
+- Total de programas principales: ~60
+- Reports (ZFIR): 20+
+- Interfaces y WebServices: 15
+- Monitores: 3
+- Utilidades: 5
+- Clases Excel implementadas: 56
+- Clases planificadas: 60+
+- Interfaces planificadas: 14
+- Documentos tecnicos: 25+
+- Programas proyecto Dominicana: 12
+
+CASOS DE USO COMUNES
+===================
+
+PARA BUSCAR UN PROGRAMA DE FACTURAS:
+"Busca programas relacionados con facturas"
+Respuesta: zfi_enviable, zfi_mod_fact, ZFIR00426, ZFIR00442, ZCL_FI_INVOICE_SERVICE
+
+PARA BUSCAR INTEGRACIONES CON AZURE:
+"¿Que programas tenemos para Azure?"
+Respuesta: ZFI_AZURE_PDF_UPLOAD, ZCL_AZURE_GATEWAY (planificado)
+
+PARA BUSCAR PROCESAMIENTO DE EXCEL:
+"¿Como proceso archivos Excel?"
+Respuesta: Libreria completa de 56 clases Excel: ZCL_EXCEL, ZCL_EXCEL_WORKSHEET, etc.
+
+PARA BUSCAR WEBSERVICES:
+"¿Que webservices tenemos?"
+Respuesta: zfi_guest_ws_get/post, zfi_guitart_ws_get/post, zfi_ws_get
+
+PARA BUSCAR MONITORES:
+"¿Que monitores financieros hay?"
+Respuesta: zfi_monitor_0002, zfi_monitor_0003, zfi_monitor_0004
+
+PARA BUSCAR LOGS:
+"¿Donde estan los logs?"
+Respuesta: zfi_faven_log, zfi_procesa_log, zfi_i337_log, zfi_inven_log, zfi_voxel_log
+
+PARA PROYECTO DOMINICANA:
+"¿Que programas tenemos para Republica Dominicana?"
+Respuesta: 12 programas ZFIR00426-ZFIR00453, siendo ZFIR00445 el mas critico
+
+INFORMACION PARA DESARROLLADORES
+================================
+
+PLANTILLAS DISPONIBLES:
+- PLANTILLA_CLASE_SERVICIO.abap - Para clases de servicio
+- PLANTILLA_CLASE_MODELO.abap - Para clases modelo
+- PLANTILLA_INTERFACE.abap - Para interfaces
+- PLANTILLA_EXCEPCION.abap - Para excepciones
+
+DOCUMENTACION TECNICA:
+- README_ESTRUCTURA_CLASES.md - Guia de estructura de clases
+- CONVENCIONES_NOMENCLATURA_CLASES.md - Convenciones de nomenclatura
+- INICIO_RAPIDO.md - Guia de inicio rapido
+- Manual de uso.docx - Manual de uso general
+
+HERRAMIENTAS DE DESARROLLO:
+- buscador_programas.md - Herramienta de busqueda
+- referencias_cruzadas.md - Referencias cruzadas
+- actualizar_descripciones.ps1 - Script para actualizar descripciones
+
+PROXIMOS DESARROLLOS PLANIFICADOS
+=================================
+
+PRIORIDAD ALTA:
+1. ZCL_FI_INVOICE_SERVICE - Servicio principal de facturas
+2. ZCL_FI_PAYMENT_PROCESSOR - Procesador de pagos
+3. ZCL_FI_DOCUMENT_MODEL - Modelo base de documentos
+4. ZIF_FI_DOCUMENT_PROCESSOR - Interface de procesamiento
+5. ZCX_FI_VALIDATION_ERROR - Excepcion de validacion
+
+PRIORIDAD MEDIA:
+1. ZCL_FI_INVOICE_DAO - Acceso a datos de facturas
+2. ZCL_AZURE_GATEWAY - Gateway para Azure
+3. ZCL_UT_STRING_HELPER - Utilidades de cadenas
+4. ZCL_FI_DOCUMENT_FACTORY - Factory de documentos
+5. ZCL_FI_PROCESS_CONTROLLER - Controlador de procesos
+
+CONTACTO Y MANTENIMIENTO
+=======================
+Desarrollador: Santiago Jarouge
+Cliente: W2M
+Fecha ultima actualizacion: 28/01/2025
+Estado documentacion: Completa para programas principales
+Ubicacion biblioteca: C:\Users\sjaro\OneDrive\W2M\03 Biblioteca
+
+NOTAS IMPORTANTES PARA EL BOT
+=============================
+- Siempre mencionar si un programa esta implementado o planificado
+- Para Excel, destacar que hay 56 clases ya implementadas
+- Para Dominicana, mencionar que ZFIR00445 es CRITICO
+- Sugerir usar plantillas para nuevos desarrollos
+- Recomendar seguir convenciones de nomenclatura
+- Mencionar ubicacion en estructura de carpetas
+- Destacar funcionalidades principales de cada programa
