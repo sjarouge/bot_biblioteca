@@ -346,57 +346,78 @@ with st.sidebar:
     # Selector de ruta de biblioteca
     st.subheader("📂 Ubicación de la Biblioteca")
     
+    # Inicializar ruta guardada en session_state
+    if 'saved_library_path' not in st.session_state:
+        st.session_state.saved_library_path = None
+    
     # Verificar si ya está indexada
     if st.session_state.indexed_files > 0:
         st.success(f"✅ Biblioteca indexada: {st.session_state.indexed_files} archivos")
+        if st.session_state.saved_library_path:
+            st.caption(f"📁 Ruta: `{st.session_state.saved_library_path}`")
         if st.button("🔄 Re-indexar Biblioteca", type="secondary"):
             st.session_state.knowledge_base = None
             st.session_state.indexed_files = 0
+            st.session_state.saved_library_path = None
             st.rerun()
     else:
-        st.info("ℹ️ Primero necesitas indexar la biblioteca para poder hacer consultas")
-    
-    # Intentar detectar la ruta automáticamente
-    try:
-        repo_root = SCRIPT_DIR.parent
-        
-        # En Streamlit Cloud, la ruta típica es /mount/src/
-        # Buscar en varias ubicaciones posibles
-        possible_paths = [
-            repo_root,  # Mismo nivel que bot_biblioteca
-            repo_root.parent,  # Un nivel arriba
-            Path('/mount/src'),  # Ruta típica de Streamlit Cloud
-            Path('/mount/src') / repo_root.name,  # Si bot_biblioteca está en /mount/src/bot_biblioteca
-        ]
-        
-        detected_path = None
-        for path in possible_paths:
-            if path.exists() and (path / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
-                detected_path = str(path)
-                break
-        
-        if detected_path:
-            default_path = detected_path
-            st.success(f"✅ Biblioteca detectada automáticamente en: `{detected_path}`")
-        else:
-            # Ruta por defecto para Streamlit Cloud
-            # Intentar detectar si estamos en Streamlit Cloud
-            if Path('/mount/src').exists():
-                # Estamos en Streamlit Cloud
-                default_path = "/mount/src"
-                st.info("ℹ️ En Streamlit Cloud. Si subiste el archivo a la raíz del repo, usa: `/mount/src`")
+        # Intentar detectar y indexar automáticamente
+        try:
+            repo_root = SCRIPT_DIR.parent
+            
+            # En Streamlit Cloud, la ruta típica es /mount/src/
+            # Buscar en varias ubicaciones posibles
+            possible_paths = [
+                repo_root,  # Mismo nivel que bot_biblioteca
+                repo_root.parent,  # Un nivel arriba
+                Path('/mount/src'),  # Ruta típica de Streamlit Cloud
+                Path('/mount/src') / repo_root.name,  # Si bot_biblioteca está en /mount/src/bot_biblioteca
+            ]
+            
+            detected_path = None
+            for path in possible_paths:
+                if path.exists() and (path / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
+                    detected_path = str(path)
+                    break
+            
+            # Si detectamos la ruta y no está indexada, indexar automáticamente
+            if detected_path and st.session_state.knowledge_base is None:
+                with st.spinner("🔄 Indexando biblioteca automáticamente..."):
+                    try:
+                        kb, count = index_library(detected_path)
+                        st.session_state.knowledge_base = kb
+                        st.session_state.indexed_files = count
+                        st.session_state.saved_library_path = detected_path
+                        st.success(f"✅ Biblioteca indexada automáticamente: {count} archivos")
+                        st.rerun()
+                    except Exception as e:
+                        st.warning(f"⚠️ No se pudo indexar automáticamente: {str(e)}")
+            
+            if detected_path:
+                default_path = detected_path
+                if st.session_state.indexed_files > 0:
+                    st.success(f"✅ Biblioteca detectada en: `{detected_path}`")
+                else:
+                    st.info(f"ℹ️ Biblioteca detectada en: `{detected_path}`")
             else:
-                # Estamos en local
-                default_path = str(repo_root)
-                st.info(f"ℹ️ Ruta sugerida: `{repo_root}` (ajusta si es necesario)")
-    except Exception as e:
-        # Ruta por defecto para Streamlit Cloud
-        default_path = "/mount/src" if Path('/mount/src').exists() else ""
+                # Ruta por defecto para Streamlit Cloud
+                if Path('/mount/src').exists():
+                    default_path = "/mount/src"
+                    st.info("ℹ️ En Streamlit Cloud. Si subiste el archivo a la raíz del repo, usa: `/mount/src`")
+                else:
+                    default_path = str(repo_root)
+                    st.info(f"ℹ️ Ruta sugerida: `{repo_root}` (ajusta si es necesario)")
+        except Exception as e:
+            default_path = "/mount/src" if Path('/mount/src').exists() else ""
+    
+    # Si ya hay una ruta guardada, usarla como default
+    if st.session_state.saved_library_path:
+        default_path = st.session_state.saved_library_path
     
     library_path = st.text_input(
         "Ruta de la biblioteca:",
-        value=default_path,
-        help="Ruta donde está ubicada la biblioteca W2M. Debe contener el archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt"
+        value=default_path if 'default_path' in locals() else (st.session_state.saved_library_path or ""),
+        help="Ruta donde está ubicada la biblioteca. Debe contener el archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt"
     )
     
     # Mostrar instrucciones
@@ -438,6 +459,7 @@ with st.sidebar:
                             kb, count = index_library(library_path)
                             st.session_state.knowledge_base = kb
                             st.session_state.indexed_files = count
+                            st.session_state.saved_library_path = library_path  # Guardar ruta
                             st.success(f"✅ Biblioteca indexada correctamente: {count} archivos")
                             st.balloons()  # Animación de celebración
                             st.rerun()  # Recargar para mostrar el estado actualizado
@@ -486,17 +508,39 @@ if query:
     
     # Buscar respuesta
     if st.session_state.knowledge_base is None:
-        response = """⚠️ **La biblioteca no está indexada aún.**
+        # Intentar indexar automáticamente si hay ruta guardada
+        if st.session_state.saved_library_path:
+            with st.spinner("🔄 Indexando biblioteca automáticamente..."):
+                try:
+                    kb, count = index_library(st.session_state.saved_library_path)
+                    st.session_state.knowledge_base = kb
+                    st.session_state.indexed_files = count
+                    st.rerun()
+                except:
+                    pass
+        
+        if st.session_state.knowledge_base is None:
+            response = """⚠️ **La biblioteca no está indexada aún.**
 
-Para poder hacer consultas, primero necesitas:
+El sistema intentará indexar automáticamente si detecta la biblioteca.
 
+Si no se indexa automáticamente:
 1. **Ir a la barra lateral** (← izquierda)
 2. **Ingresar la ruta de la biblioteca** (o usar la detectada automáticamente)
 3. **Click en "🔄 Indexar Biblioteca"**
 4. **Esperar a que termine la indexación**
 
 Una vez indexada, podrás hacer todas las consultas que quieras. 🚀"""
-        results = []
+            results = []
+        else:
+            # Si se indexó automáticamente, buscar la respuesta
+            with st.spinner("Buscando en la biblioteca..."):
+                try:
+                    results = search_in_content(query, st.session_state.knowledge_base)
+                    response = format_response(query, results)
+                except Exception as e:
+                    response = f"❌ Error al buscar: {str(e)}"
+                    results = []
     else:
         with st.spinner("Buscando en la biblioteca..."):
             try:
