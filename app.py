@@ -264,64 +264,174 @@ def search_in_content(query: str, knowledge_base: Dict) -> List[Dict]:
     return results[:10]  # Top 10 resultados
 
 
-def extract_context(text: str, query: str, context_size: int = 200) -> str:
-    """Extrae el contexto alrededor de la búsqueda"""
+def extract_context(text: str, query: str, context_size: int = 150) -> str:
+    """Extrae el contexto alrededor de la búsqueda de forma más inteligente"""
     text_lower = text.lower()
     query_lower = query.lower()
+    query_words = query_lower.split()
     
     # Buscar la primera ocurrencia
     idx = text_lower.find(query_lower)
     if idx == -1:
         # Si no hay match exacto, buscar palabras individuales
-        words = query_lower.split()
-        for word in words:
+        for word in query_words:
             idx = text_lower.find(word)
             if idx != -1:
                 break
     
     if idx == -1:
-        return text[:context_size] + "..."
+        # Si no encuentra nada, devolver inicio del texto limitado
+        return text[:context_size].strip()
     
-    # Extraer contexto alrededor
+    # Extraer contexto alrededor, pero buscar oraciones completas
     start = max(0, idx - context_size // 2)
     end = min(len(text), idx + len(query) + context_size // 2)
     
-    context = text[start:end]
-    if start > 0:
-        context = "..." + context
-    if end < len(text):
-        context = context + "..."
+    # Intentar empezar y terminar en puntos o saltos de línea
+    original_text = text
+    while start > 0 and original_text[start] not in ['.', '\n', '!', '?']:
+        start -= 1
+        if idx - start > context_size:
+            break
+    
+    while end < len(original_text) and original_text[end] not in ['.', '\n', '!', '?']:
+        end += 1
+        if end - idx > context_size:
+            break
+    
+    context = original_text[start:end].strip()
+    
+    # Limpiar contexto: eliminar líneas vacías múltiples y espacios excesivos
+    lines = [line.strip() for line in context.split('\n') if line.strip()]
+    context = ' '.join(lines[:3])  # Máximo 3 líneas
+    
+    if len(context) > context_size:
+        context = context[:context_size].rsplit(' ', 1)[0] + "..."
     
     return context
 
 
-def format_response(query: str, results: List[Dict]) -> str:
-    """Formatea la respuesta del BOT"""
-    if not results:
-        return "No encontré información específica sobre tu consulta. Intenta reformular la pregunta o buscar por:\n\n- Nombre de programa (ej: ZFI_BLUEBAY_GET)\n- Funcionalidad (ej: facturas, pagos, Azure)\n- Tipo de programa (ej: reports, interfaces, utilidades)"
+def extract_key_info(content: str, query: str) -> str:
+    """Extrae información clave del contenido de forma concisa y natural"""
+    query_lower = query.lower()
+    query_words = [w for w in query_lower.split() if len(w) > 2]  # Ignorar palabras muy cortas
     
-    response = f"Encontré {len(results)} resultado(s) relevante(s):\n\n"
+    # Buscar secciones relevantes
+    lines = content.split('\n')
+    relevant_sentences = []
+    seen = set()
     
-    for i, result in enumerate(results[:5], 1):  # Mostrar top 5
-        if result['type'] == 'program':
-            response += f"**{i}. Programa: {result['name']}**\n"
-            response += f"   📁 Ubicación: `{result['folder']}`\n"
-            response += f"   📄 Archivo: `{result['path']}`\n"
-        else:
-            response += f"**{i}. Documentación: {result['path']}**\n"
+    for line in lines:
+        line_stripped = line.strip()
+        if not line_stripped or len(line_stripped) < 15:
+            continue
+            
+        line_lower = line_stripped.lower()
         
-        # Agregar contexto relevante
-        context = result['content']
-        if len(context) > 300:
-            context = context[:300] + "..."
-        response += f"   💡 Contexto: {context}\n\n"
+        # Priorizar líneas que contienen palabras clave
+        matches = sum(1 for word in query_words if word in line_lower)
+        
+        # También buscar líneas con información importante
+        is_important = any(keyword in line_lower for keyword in [
+            'funcion', 'uso', 'cuando usar', 'parametro', 'tipo', 'ubicacion',
+            'programa', 'contabiliza', 'usa', 'bapi', 'function module'
+        ])
+        
+        if matches > 0 or is_important:
+            # Limpiar la línea: quitar marcadores de markdown excesivos
+            clean_line = line_stripped
+            clean_line = clean_line.replace('**', '').replace('*', '').replace('#', '').strip()
+            clean_line = clean_line.replace('  ', ' ')  # Espacios dobles
+            
+            # Evitar duplicados
+            if clean_line not in seen and len(clean_line) > 20:
+                relevant_sentences.append(clean_line)
+                seen.add(clean_line)
     
-    # Agregar sugerencias
-    response += "\n---\n"
-    response += "**💡 Sugerencias:**\n"
-    response += "- Puedes preguntar sobre programas específicos, funcionalidades, o estructura de la biblioteca\n"
-    response += "- Ejemplos: '¿Qué programas hay para facturas?', '¿Cómo funciona ZFI_BLUEBAY_GET?', '¿Dónde están los reports?'\n"
+    # Si encontramos información relevante, devolver las primeras 2-3 líneas más importantes
+    if relevant_sentences:
+        # Priorizar las que tienen más matches
+        relevant_sentences.sort(key=lambda x: sum(1 for word in query_words if word in x.lower()), reverse=True)
+        info = '\n'.join(relevant_sentences[:3])
+        
+        # Limitar longitud total
+        if len(info) > 350:
+            # Truncar de forma inteligente
+            parts = info.split('\n')
+            result = []
+            total_len = 0
+            for part in parts:
+                if total_len + len(part) < 350:
+                    result.append(part)
+                    total_len += len(part) + 1
+                else:
+                    break
+            info = '\n'.join(result)
+            if info != info.split('\n')[0]:  # Si hay más de una línea
+                info += "..."
+        
+        return info
     
+    # Si no, devolver inicio del contenido limitado y limpiado
+    fallback = content[:250].strip()
+    # Limpiar markdown excesivo
+    fallback = fallback.replace('**', '').replace('*', '').replace('#', '').strip()
+    fallback = ' '.join(fallback.split())  # Normalizar espacios
+    return fallback + "..." if len(content) > 250 else fallback
+
+
+def format_response(query: str, results: List[Dict]) -> str:
+    """Formatea la respuesta del BOT de forma concisa y natural"""
+    if not results:
+        return "No encontré información específica. Intenta buscar por nombre de programa o funcionalidad.\n\n— Santi"
+    
+    # Limitar a top 2-3 resultados para respuestas más concisas
+    top_results = results[:2] if len(results) > 1 else results[:1]
+    
+    # Si hay un resultado muy relevante, dar respuesta directa y concisa
+    if len(top_results) == 1 and top_results[0]['relevance'] > 10:
+        result = top_results[0]
+        
+        if result['type'] == 'program':
+            response = f"**{result['name']}**\n\n"
+        else:
+            response = ""
+        
+        # Extraer información clave de forma natural
+        key_info = extract_key_info(result.get('full_content', result['content']), query)
+        response += key_info
+        response += "\n\n— Santi"
+        
+        return response
+    
+    # Respuesta para múltiples resultados (más concisa)
+    response_parts = []
+    
+    for result in top_results:
+        if result['type'] == 'program':
+            header = f"**{result['name']}**"
+            if result.get('folder'):
+                header += f" - {result['folder']}"
+        else:
+            # Buscar título relevante
+            content = result.get('full_content', result['content'])
+            lines = content.split('\n')
+            title = ""
+            for line in lines[:8]:
+                stripped = line.strip()
+                if stripped.startswith(('##', '**')) and 20 < len(stripped) < 80:
+                    title = stripped.replace('#', '').replace('**', '').strip()
+                    break
+            
+            header = f"**{title}**" if title else "**Información relevante**"
+        
+        # Extraer información clave
+        key_info = extract_key_info(result.get('full_content', result['content']), query)
+        if key_info:
+            response_parts.append(f"{header}\n{key_info}")
+    
+    response = "\n\n".join(response_parts)
+    response += "\n\n— Santi"
     return response
 
 
@@ -530,7 +640,9 @@ Si no se indexa automáticamente:
 3. **Click en "🔄 Indexar Biblioteca"**
 4. **Esperar a que termine la indexación**
 
-Una vez indexada, podrás hacer todas las consultas que quieras. 🚀"""
+Una vez indexada, podrás hacer todas las consultas que quieras. 🚀
+
+— Santi"""
             results = []
         else:
             # Si se indexó automáticamente, buscar la respuesta
@@ -539,7 +651,7 @@ Una vez indexada, podrás hacer todas las consultas que quieras. 🚀"""
                     results = search_in_content(query, st.session_state.knowledge_base)
                     response = format_response(query, results)
                 except Exception as e:
-                    response = f"❌ Error al buscar: {str(e)}"
+                    response = f"❌ Error al buscar: {str(e)}\n\n— Santi"
                     results = []
     else:
         with st.spinner("Buscando en la biblioteca..."):
@@ -547,7 +659,7 @@ Una vez indexada, podrás hacer todas las consultas que quieras. 🚀"""
                 results = search_in_content(query, st.session_state.knowledge_base)
                 response = format_response(query, results)
             except Exception as e:
-                response = f"❌ Error al buscar: {str(e)}"
+                response = f"❌ Error al buscar: {str(e)}\n\n— Santi"
                 results = []
     
     # Mostrar respuesta
