@@ -360,20 +360,38 @@ with st.sidebar:
     try:
         repo_root = SCRIPT_DIR.parent
         
-        # Buscar biblioteca en el mismo repositorio (si está subida)
-        # O en el directorio padre (si está en local)
-        if (repo_root / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
-            default_path = str(repo_root)
-            st.success("✅ Biblioteca detectada automáticamente en el repositorio")
-        elif (repo_root.parent / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
-            default_path = str(repo_root.parent)
-            st.success("✅ Biblioteca detectada automáticamente")
+        # En Streamlit Cloud, la ruta típica es /mount/src/
+        # Buscar en varias ubicaciones posibles
+        possible_paths = [
+            repo_root,  # Mismo nivel que bot_biblioteca
+            repo_root.parent,  # Un nivel arriba
+            Path('/mount/src'),  # Ruta típica de Streamlit Cloud
+            Path('/mount/src') / repo_root.name,  # Si bot_biblioteca está en /mount/src/bot_biblioteca
+        ]
+        
+        detected_path = None
+        for path in possible_paths:
+            if path.exists() and (path / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
+                detected_path = str(path)
+                break
+        
+        if detected_path:
+            default_path = detected_path
+            st.success(f"✅ Biblioteca detectada automáticamente en: `{detected_path}`")
         else:
-            # Ruta por defecto vacía (el usuario la ingresará)
-            default_path = ""
-            st.warning("⚠️ No se detectó la biblioteca. Ingresa la ruta manualmente.")
+            # Ruta por defecto para Streamlit Cloud
+            # Intentar detectar si estamos en Streamlit Cloud
+            if Path('/mount/src').exists():
+                # Estamos en Streamlit Cloud
+                default_path = "/mount/src"
+                st.info("ℹ️ En Streamlit Cloud. Si subiste el archivo a la raíz del repo, usa: `/mount/src`")
+            else:
+                # Estamos en local
+                default_path = str(repo_root)
+                st.info(f"ℹ️ Ruta sugerida: `{repo_root}` (ajusta si es necesario)")
     except Exception as e:
-        default_path = ""
+        # Ruta por defecto para Streamlit Cloud
+        default_path = "/mount/src" if Path('/mount/src').exists() else ""
     
     library_path = st.text_input(
         "Ruta de la biblioteca:",
@@ -381,21 +399,23 @@ with st.sidebar:
         help="Ruta donde está ubicada la biblioteca W2M. Debe contener el archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt"
     )
     
-    # Mostrar instrucciones si no hay ruta
-    if not library_path:
-        with st.expander("📖 ¿Cómo obtener la ruta de la biblioteca?"):
-            st.markdown("""
-            **Opción 1: Si la biblioteca está en el repositorio**
-            - No necesitas hacer nada, se detectará automáticamente
-            
-            **Opción 2: Si la biblioteca está en tu computadora (Windows)**
-            - Copia la ruta completa, por ejemplo:
-            - `C:\\Users\\sjaro\\OneDrive\\W2M\\03 Biblioteca`
-            
-            **Opción 3: Si la biblioteca está en OneDrive/Compartida**
-            - Usa la ruta completa de la carpeta compartida
-            - Asegúrate de que Streamlit Cloud pueda acceder a ella
-            """)
+    # Mostrar instrucciones
+    with st.expander("📖 ¿Cómo obtener la ruta de la biblioteca?"):
+        st.markdown("""
+        **En Streamlit Cloud:**
+        - Si subiste `BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt` a la **raíz** del repositorio:
+          - Usa: `/mount/src`
+        - Si está en otra ubicación, ajusta la ruta
+        
+        **En tu computadora local (Windows):**
+        - Copia la ruta completa donde está el archivo
+        - Ejemplo: `C:\\Users\\sjaro\\OneDrive\\W2M\\03 Biblioteca`
+        - El archivo debe estar en esa carpeta
+        
+        **Verificar:**
+        - El archivo debe llamarse exactamente: `BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt`
+        - Debe estar en la carpeta que indiques en la ruta
+        """)
     
     if st.button("🔄 Indexar Biblioteca", type="primary", disabled=not library_path):
         if not library_path:
