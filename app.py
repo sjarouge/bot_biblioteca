@@ -380,59 +380,139 @@ def extract_key_info(content: str, query: str) -> str:
     return fallback + "..." if len(content) > 250 else fallback
 
 
+def extract_program_list_from_content(content: str, query: str) -> str:
+    """Extrae lista de programas de forma inteligente"""
+    query_lower = query.lower()
+    lines = content.split('\n')
+    
+    # Buscar sección "RESPUESTA RAPIDA" o sección específica
+    program_list = []
+    in_list_section = False
+    found_section_header = False
+    
+    for i, line in enumerate(lines):
+        line_stripped = line.strip()
+        line_lower = line_stripped.lower()
+        
+        # Detectar inicio de sección relevante
+        if any(header in line_lower for header in [
+            'respuesta rapida', 'programas que contabilizan', 'listado completo',
+            'los 3 programas', 'los programas principales'
+        ]):
+            in_list_section = True
+            found_section_header = True
+            continue
+        
+        # Si encontramos separadores después de una sección, parar
+        if found_section_header and line_stripped.startswith(('===', '---')) and len(program_list) > 0:
+            break
+        
+        # Si estamos en sección de lista, buscar líneas con programas
+        if in_list_section:
+            # Buscar líneas numeradas o con guiones que contengan programas
+            if (line_stripped.startswith(('1.', '2.', '3.', '4.', '5.', '-', '*')) or 
+                any(prefix in line_stripped for prefix in ['ZFI', 'ZFIR', 'ZARR', 'ZUT', 'ZCL'])):
+                
+                # Limpiar la línea
+                clean_line = line_stripped
+                # Quitar numeración y marcadores
+                for prefix in ['1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.', '-', '*', '**']:
+                    if clean_line.startswith(prefix):
+                        clean_line = clean_line[len(prefix):].strip()
+                
+                # Quitar markdown
+                clean_line = clean_line.replace('**', '').replace('*', '').replace('#', '').strip()
+                
+                # Solo agregar si tiene contenido relevante
+                if clean_line and len(clean_line) > 10 and any(prefix in clean_line for prefix in ['ZFI', 'ZFIR', 'ZARR', 'ZUT']):
+                    program_list.append(clean_line)
+        
+        # Si encontramos nueva sección importante, resetear
+        if line_stripped.startswith(('ESTRUCTURA', 'INFORMACION GENERAL', 'CONVENCIONES')) and found_section_header:
+            break
+    
+    return program_list
+
+
 def format_response(query: str, results: List[Dict]) -> str:
     """Formatea la respuesta del BOT de forma concisa y natural"""
     if not results:
-        return "No encontré información específica. Intenta buscar por nombre de programa o funcionalidad.\n\n— Santi"
+        return "No encontré información específica. Intenta buscar por nombre de programa o funcionalidad."
     
-    # Limitar a top 2-3 resultados para respuestas más concisas
-    top_results = results[:2] if len(results) > 1 else results[:1]
+    # Buscar el mejor resultado (más relevante)
+    best_result = results[0] if results else None
     
-    # Si hay un resultado muy relevante, dar respuesta directa y concisa
-    if len(top_results) == 1 and top_results[0]['relevance'] > 10:
+    # Si la pregunta es sobre programas que hacen algo específico, buscar listas
+    query_lower = query.lower()
+    is_list_question = any(word in query_lower for word in [
+        'que programas', 'cuales programas', 'listado', 'lista', 
+        'programas que', 'que programas tenemos', 'programas para'
+    ])
+    
+    if is_list_question and best_result:
+        # Para preguntas de listado, extraer información estructurada
+        content = best_result.get('full_content', best_result.get('content', ''))
+        
+        # Intentar extraer lista de programas
+        program_list = extract_program_list_from_content(content, query)
+        
+        if program_list:
+            # Formatear respuesta limpia
+            response = "\n".join(program_list[:10])  # Máximo 10 programas
+            return response
+    
+    # Respuesta normal para otros casos
+    top_results = results[:1] if len(results) > 0 else []
+    
+    if top_results:
         result = top_results[0]
+        content = result.get('full_content', result.get('content', ''))
         
+        # Filtrar secciones no deseadas (PREGUNTA:, RESPUESTA:, etc.)
+        lines = content.split('\n')
+        filtered_lines = []
+        skip_next = False
+        
+        for line in lines:
+            line_stripped = line.strip()
+            line_lower = line_stripped.lower()
+            
+            # Saltar líneas que son solo marcadores de sección
+            if any(marker in line_lower for marker in [
+                'pregunta:', 'respuesta:', 'ejemplos de preguntas',
+                '===', '---', 'respuesta rapida:', 'ver seccion'
+            ]) and len(line_stripped) < 100:
+                skip_next = True
+                continue
+            
+            if skip_next and (line_stripped.startswith(('===', '---')) or not line_stripped):
+                skip_next = False
+                continue
+            
+            skip_next = False
+            
+            # Solo agregar líneas con contenido real
+            if line_stripped and len(line_stripped) > 10:
+                # Limpiar markdown excesivo
+                clean = line_stripped.replace('**', '').replace('*', '').replace('#', '').strip()
+                if clean and not clean.startswith(('===', '---')):
+                    filtered_lines.append(clean)
+        
+        # Extraer información clave de las líneas filtradas
+        filtered_content = '\n'.join(filtered_lines[:15])  # Máximo 15 líneas
+        
+        # Si es un programa, mostrar nombre
         if result['type'] == 'program':
-            response = f"**{result['name']}**\n\n"
+            response = f"**{result['name']}**\n\n{filtered_content[:400]}"
         else:
-            response = ""
+            response = filtered_content[:400]
         
-        # Extraer información clave de forma natural
-        key_info = extract_key_info(result.get('full_content', result['content']), query)
-        response += key_info
-        response += "\n\n— Santi"
+        if len(filtered_content) > 400:
+            response += "..."
         
         return response
     
-    # Respuesta para múltiples resultados (más concisa)
-    response_parts = []
-    
-    for result in top_results:
-        if result['type'] == 'program':
-            header = f"**{result['name']}**"
-            if result.get('folder'):
-                header += f" - {result['folder']}"
-        else:
-            # Buscar título relevante
-            content = result.get('full_content', result['content'])
-            lines = content.split('\n')
-            title = ""
-            for line in lines[:8]:
-                stripped = line.strip()
-                if stripped.startswith(('##', '**')) and 20 < len(stripped) < 80:
-                    title = stripped.replace('#', '').replace('**', '').strip()
-                    break
-            
-            header = f"**{title}**" if title else "**Información relevante**"
-        
-        # Extraer información clave
-        key_info = extract_key_info(result.get('full_content', result['content']), query)
-        if key_info:
-            response_parts.append(f"{header}\n{key_info}")
-    
-    response = "\n\n".join(response_parts)
-    response += "\n\n— Santi"
-    return response
+    return "No encontré información específica."
 
 
 def get_suggested_questions() -> List[str]:
@@ -640,9 +720,7 @@ Si no se indexa automáticamente:
 3. **Click en "🔄 Indexar Biblioteca"**
 4. **Esperar a que termine la indexación**
 
-Una vez indexada, podrás hacer todas las consultas que quieras. 🚀
-
-— Santi"""
+Una vez indexada, podrás hacer todas las consultas que quieras. 🚀"""
             results = []
         else:
             # Si se indexó automáticamente, buscar la respuesta
@@ -651,7 +729,7 @@ Una vez indexada, podrás hacer todas las consultas que quieras. 🚀
                     results = search_in_content(query, st.session_state.knowledge_base)
                     response = format_response(query, results)
                 except Exception as e:
-                    response = f"❌ Error al buscar: {str(e)}\n\n— Santi"
+                    response = f"❌ Error al buscar: {str(e)}"
                     results = []
     else:
         with st.spinner("Buscando en la biblioteca..."):
@@ -659,7 +737,7 @@ Una vez indexada, podrás hacer todas las consultas que quieras. 🚀
                 results = search_in_content(query, st.session_state.knowledge_base)
                 response = format_response(query, results)
             except Exception as e:
-                response = f"❌ Error al buscar: {str(e)}\n\n— Santi"
+                response = f"❌ Error al buscar: {str(e)}"
                 results = []
     
     # Mostrar respuesta
