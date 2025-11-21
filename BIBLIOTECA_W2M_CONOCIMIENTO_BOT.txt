@@ -1,13 +1,21 @@
-BIBLIOTECA W2M - BASE DE CONOCIMIENTO PARA BOT COPILOT
-===========================================================
+BIBLIOTECA - BASE DE CONOCIMIENTO PARA BOT COPILOT
+===================================================
 
 INFORMACION GENERAL DE LA BIBLIOTECA
 ====================================
 Desarrollador: Santiago Jarouge
-Cliente: W2M
 Total de Programas: 80+ programas ABAP
-Fecha Actualizacion: 28/01/2025
+Fecha Actualizacion: 21/11/2025
 Organizacion: Por funcionalidad y paquetes SAP
+
+RESPUESTA RAPIDA: PROGRAMAS QUE CONTABILIZAN FACTURAS
+=======================================================
+Los 3 programas principales que contabilizan facturas son:
+1. ZFIR00426 - Facturacion PUJ Limite 250k DOP (usa BAPI_ACC_DOCUMENT_POST)
+2. ZFIR00442 - Facturacion Agrupada (usa BAPI_ACC_DOCUMENT_POST)
+3. ZFI_MOD_FACT - Modificacion de Facturas (usa Z_UPDATE_DOCUMENT para modificar facturas ya contabilizadas)
+
+Ver seccion "PROGRAMAS QUE CONTABILIZAN FACTURAS - LISTADO COMPLETO" para detalles completos.
 
 ESTRUCTURA PRINCIPAL DE LA BIBLIOTECA
 =====================================
@@ -205,24 +213,35 @@ PROGRAMAS DEL PROYECTO DOMINICANA:
    - Funcion: Procesamiento de facturas PUJ con limite fiscal de 250,000 DOP
    - Complejidad: Media (4 dictionary objects)
    - Criticidad: Alta
+   - Funcion BAPI: BAPI_ACC_DOCUMENT_POST
+   - Cuando usar: Para contabilizar facturas PUJ respetando limite fiscal dominicano
+   - Parametros principales: Fecha contable, sociedad, rango de facturas
+   - Tablas utilizadas: BKPF, BSEG, ZFI00426_INVOICE
 
 2. ZFIR00427 - Facturacion PUJ Reporting
    - Tipo: Report de Analisis y Estadisticas
    - Funcion: Analisis y reporting complementario de facturacion PUJ
    - Complejidad: Baja (1 dictionary object)
    - Criticidad: Media
+   - Cuando usar: Para analizar facturas PUJ ya procesadas
+   - Relacionado con: ZFIR00426
 
 3. ZFIR00442 - Facturacion Agrupada
    - Tipo: Report de Procesamiento Avanzado
    - Funcion: Optimizacion fiscal mediante agrupacion inteligente de facturas
    - Complejidad: Alta (8 dictionary objects)
    - Criticidad: Alta
+   - Funcion BAPI: BAPI_ACC_DOCUMENT_POST
+   - Cuando usar: Para agrupar facturas antes de contabilizar y optimizar fiscalmente
+   - Parametros principales: Periodo, sociedad, criterios de agrupacion
 
 4. ZFIR00443 - Facturacion Agrupada Reporting
    - Tipo: Report de Analisis Agrupado
    - Funcion: Analisis y reporting de facturacion agrupada
    - Complejidad: Baja (1 dictionary object)
    - Criticidad: Media
+   - Cuando usar: Para analizar facturas agrupadas procesadas
+   - Relacionado con: ZFIR00442
 
 5. ZFIR00445 - Generacion XML Dominicana *** CRITICO ***
    - Tipo: Generador de XML Fiscal
@@ -235,12 +254,15 @@ PROGRAMAS DEL PROYECTO DOMINICANA:
      * z_grabar_fichero_serv - Grabacion en servidor
      * z_obtener_rutas_int_salida - Rutas productivas
      * z_obtener_rutas_int_test - Rutas de prueba
+   - Cuando usar: Mensualmente antes del dia 3 para generar XMLs fiscales
+   - Importante: Si no se ejecuta a tiempo, hay sanciones fiscales
 
 6. ZFIR00446 - Apertura Periodos Dominicana
    - Tipo: Transaccion de Gestion Fiscal
    - Funcion: Gestion y apertura de periodos fiscales dominicanos
    - Complejidad: Media (2 dictionary objects + 1 screen)
    - Criticidad: Alta
+   - Cuando usar: Al inicio de cada periodo fiscal
 
 7. ZFIR00447 - Procesamiento Especializado
    - Tipo: Report de Procesamiento
@@ -253,6 +275,7 @@ PROGRAMAS DEL PROYECTO DOMINICANA:
    - Funcion: Monitoreo y auditoria de ficheros XML generados
    - Complejidad: Alta (4 dictionary objects + 2 screens)
    - Criticidad: Alta
+   - Cuando usar: Para verificar estado de XMLs generados y enviados
 
 9. ZFIR00449 - Report Complementario
    - Tipo: Report Simple
@@ -303,20 +326,361 @@ SUFIJOS COMUNES:
 - _HELPER: Utilidades auxiliares
 - _FACTORY: Fabricas de objetos
 
+DETALLES TECNICOS DE PROGRAMAS PRINCIPALES
+===========================================
+
+PROGRAMAS DE CONTABILIZACION DE FACTURAS:
+
+ZFI_MOD_FACT - Modificacion de Facturas
+- Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_mod_fact/
+- Funcion: Modifica documentos de factura ya contabilizados
+- Function Module: Z_UPDATE_DOCUMENT
+- Tablas modificadas: BKPF, BSEG (tablas estandar SAP)
+- Parametros: pa_belnr (numero documento), pa_bukrs (sociedad), pa_gjahr (ejercicio)
+- Campos modificables: Cualquier campo de BKPF o BSEG de forma dinamica
+- Riesgo: ALTO - Modifica tablas contables estandar
+- Cuando usar: Para corregir errores en facturas ya contabilizadas
+- Auditoria: Implementa zcl_log_contable=>add_document_log
+- Relacionado con: ZARR00172 (tambien usa Z_UPDATE_DOCUMENT)
+
+ZFIR00426 - Facturacion PUJ Limite 250k DOP
+- Ubicacion: 02_Reports/zfir00426/
+- Funcion: Contabiliza facturas PUJ respetando limite fiscal de 250,000 DOP
+- Function Module: BAPI_ACC_DOCUMENT_POST
+- Tablas utilizadas: BKPF, BSEG, ZFI00426_INVOICE
+- Parametros principales: Fecha contable (pa_budat), sociedad (pa_bukrs)
+- Cuando usar: Mensualmente para contabilizar facturas PUJ de Republica Dominicana
+- Proyecto: ZFI_DOM_DOMINICANA
+- Criticidad: ALTA - Proceso fiscal critico
+- Flujo: Lee facturas -> Valida limite 250k DOP -> Agrupa -> Contabiliza con BAPI
+
+ZFIR00442 - Facturacion Agrupada
+- Ubicacion: 02_Reports/zfir00442/
+- Funcion: Agrupa facturas antes de contabilizar para optimizacion fiscal
+- Function Module: BAPI_ACC_DOCUMENT_POST
+- Complejidad: Alta (8 dictionary objects)
+- Cuando usar: Para optimizar contabilizacion agrupando facturas relacionadas
+- Proyecto: ZFI_DOM_DOMINICANA
+- Criticidad: ALTA - Optimizacion fiscal importante
+
+ZFI_ENVIABLE - Gestion de Documentos Enviables
+- Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_enviable/
+- Funcion: Gestiona documentos que estan listos para ser contabilizados
+- Cuando usar: Para preparar documentos antes de contabilizacion
+- Relacionado con: ZFI_ENVIABLE_UPD, ZFIR00426
+
+ZFI_ENVIABLE_UPD - Actualizacion de Documentos Enviables
+- Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_enviable_upd/
+- Funcion: Actualiza estado de documentos enviables
+- Cuando usar: Para actualizar estado de documentos antes de contabilizar
+- Relacionado con: ZFI_ENVIABLE
+
+ZFI_PAYMENTS_XML - Procesamiento de Pagos XML
+- Ubicacion: 01_Programas_Principales/FI_Finanzas/Pagos/zfi_payments_xml/
+- Funcion: Procesa pagos en formato XML y los contabiliza
+- Archivos: 20 archivos (5 .txt + 15 .html)
+- Cuando usar: Para procesar pagos recibidos en formato XML
+- Tipo: Contabilizacion de pagos
+
+ZFI_OPTIGEST_ANULA - Anulacion de Documentos Optigest
+- Ubicacion: 01_Programas_Principales/FI_Finanzas/zfi_optigest_anula/
+- Funcion: Gestiona anulaciones de documentos contables en Optigest
+- Archivos: 18 archivos (11 .txt + 7 .html)
+- Cuando usar: Para anular documentos contables de Optigest
+- Tipo: Contabilizacion de anulaciones
+
+FUNCIONES BAPI Y FUNCTION MODULES PARA CONTABILIZAR FACTURAS
+=============================================================
+
+BAPI_ACC_DOCUMENT_POST (BAPI Principal de Contabilizacion)
+------------------------------------------------------------
+- Tipo: BAPI estandar SAP
+- Uso: Contabiliza documentos contables (facturas, pagos, etc.)
+- Programas que la usan:
+  * ZFIR00426 - Facturacion PUJ Limite 250k DOP
+  * ZFIR00442 - Facturacion Agrupada
+- Parametros de entrada (EXPORTING):
+  * documentheader - Cabecera del documento (sociedad, fecha, tipo documento, moneda, etc.)
+- Parametros de entrada (TABLES):
+  * accountreceivable - Cuentas a cobrar (proveedores, clientes)
+  * accountgl - Cuentas de mayor (GL accounts)
+  * currencyamount - Importes en diferentes monedas
+  * accounttax - Impuestos
+  * extension2 - Extensiones personalizadas (posting keys, etc.)
+- Parametros de salida (TABLES):
+  * return - Mensajes de retorno (exito, errores, warnings)
+- Retorna en return:
+  * Si exito: type='S', id='RW', number='605', message_v2 contiene numero documento y ejercicio
+  * Numero documento: ls_return-message_v2(10) - primeros 10 caracteres
+  * Ejercicio: ls_return-message_v2+14(4) - desde posicion 14, 4 caracteres
+- Tablas afectadas: BKPF (cabecera), BSEG (posiciones)
+- Cuando usar: Para contabilizar facturas nuevas
+- Ejemplo de uso en ZFIR00426:
+  CALL FUNCTION 'BAPI_ACC_DOCUMENT_POST'
+    EXPORTING
+      documentheader    = ls_header
+    TABLES
+      accountreceivable = lt_accountreceivable
+      accountgl         = lt_glaccount
+      currencyamount    = lt_currencyamount
+      accounttax        = lt_accounttax
+      extension2        = lt_bapiparex
+      return            = lt_return
+
+BAPI_ACC_DOCUMENT_CHECK (Validacion antes de Contabilizar)
+-----------------------------------------------------------
+- Tipo: BAPI estandar SAP
+- Uso: Valida documento antes de contabilizar (simulacion)
+- Programas que la usan:
+  * ZFIR00426 - Facturacion PUJ (validacion previa)
+  * ZFIR00442 - Facturacion Agrupada (validacion previa)
+- Parametros: Iguales que BAPI_ACC_DOCUMENT_POST
+- Diferencia: No contabiliza, solo valida
+- Cuando usar: Para validar datos antes de contabilizar realmente
+- Retorna: Mensajes de validacion sin crear documento
+- Ejemplo de uso:
+  CALL FUNCTION 'BAPI_ACC_DOCUMENT_CHECK'
+    EXPORTING
+      documentheader    = ls_header
+    TABLES
+      accountreceivable = lt_accountreceivable
+      accountgl         = lt_glaccount
+      currencyamount    = lt_currencyamount
+      accounttax        = lt_accounttax
+      extension2        = lt_bapiparex
+      return            = lt_return
+
+BAPI_TRANSACTION_COMMIT (Confirmar Transaccion)
+------------------------------------------------
+- Tipo: BAPI estandar SAP
+- Uso: Confirma transaccion despues de BAPI_ACC_DOCUMENT_POST
+- Programas que la usan:
+  * ZFIR00426 - Confirma contabilizacion
+  * ZFIR00442 - Confirma contabilizacion
+- Cuando usar: Despues de BAPI_ACC_DOCUMENT_POST exitoso
+- Importante: Sin COMMIT, los cambios no se guardan permanentemente
+- Ejemplo de uso:
+  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+    EXPORTING
+      wait = abap_true
+
+BAPI_TRANSACTION_ROLLBACK (Revertir Transaccion)
+-------------------------------------------------
+- Tipo: BAPI estandar SAP
+- Uso: Revierte transaccion si hay errores
+- Programas que la usan:
+  * ZFIR00426 - Revierte si hay error en contabilizacion
+  * ZFIR00442 - Revierte si hay error en contabilizacion
+- Cuando usar: Si BAPI_ACC_DOCUMENT_POST retorna errores
+- Importante: Deshace todos los cambios de la transaccion
+- Ejemplo de uso:
+  CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'
+
+Z_UPDATE_DOCUMENT (Modificacion de Documentos Contables)
+---------------------------------------------------------
+- Tipo: Function Module personalizado
+- Uso: Modifica documentos contables ya contabilizados
+- Ubicacion: zfi_mod_fact/z_update_document/z_update_document.txt
+- Programas que la usan:
+  * ZFI_MOD_FACT - Modificacion de facturas (uso principal)
+  * ZARR00172 - Actualizacion de campo XREF1_HD (uso indirecto)
+- Parametros de entrada (IMPORTING):
+  * i_belnr - Numero de documento contable (BELNR_D)
+  * i_bukrs - Codigo de sociedad (BUKRS)
+  * i_gjahr - Ejercicio fiscal (GJAHR)
+  * it_bkpf - Tabla de campos BKPF a modificar (ZFI_TABLA_CAMPO_VALOR)
+  * it_bseg - Tabla de campos BSEG a modificar (ZFI_TABLA_BSEG_CAMPO_VALOR)
+- Tablas modificadas: BKPF (cabecera documentos), BSEG (posiciones documentos)
+- Metodo: Usa CHANGE_DOCUMENT estandar SAP
+- Auditoria: Implementa zcl_log_contable=>add_document_log
+- Riesgo: ALTO - Modifica tablas contables estandar
+- Cuando usar: Para corregir errores en facturas ya contabilizadas
+- Estructura it_bkpf/it_bseg:
+  * campo - Nombre del campo a modificar (ej: 'XREF1_HD', 'BKTXT')
+  * valor - Nuevo valor para el campo
+- Ejemplo de uso en ZFI_MOD_FACT:
+  CALL FUNCTION 'Z_UPDATE_DOCUMENT'
+    EXPORTING
+      i_belnr = pa_belnr
+      i_bukrs = pa_bukrs
+      i_gjahr = pa_gjahr
+      it_bkpf = pt_campos_bkpf
+      it_bseg = pt_campos_bseg
+- Ejemplo de uso en ZARR00172:
+  wa_campos_bkpf-campo = 'XREF1_HD'.
+  CONCATENATE sy-datum sy-uzeit anulado
+         INTO wa_campos_bkpf-valor
+         SEPARATED BY space.
+  CALL FUNCTION 'Z_UPDATE_DOCUMENT'
+    EXPORTING
+      i_belnr = pw_bsid-belnr
+      i_bukrs = pw_bsid-bukrs
+      i_gjahr = pw_bsid-gjahr
+      it_bkpf = it_campos_bkpf
+      it_bseg = it_campos_bseg
+
+FLUJO COMPLETO DE CONTABILIZACION CON BAPIs
+============================================
+
+Paso 1: Preparar datos
+- Crear documentheader con sociedad, fecha, tipo documento
+- Llenar accountreceivable con datos de proveedores/clientes
+- Llenar accountgl con cuentas de mayor
+- Llenar currencyamount con importes
+- Llenar accounttax con impuestos
+- Llenar extension2 con posting keys y extensiones
+
+Paso 2: Validar (Opcional pero recomendado)
+- CALL FUNCTION 'BAPI_ACC_DOCUMENT_CHECK'
+- Verificar return para errores
+- Si hay errores, corregir datos y repetir validacion
+
+Paso 3: Contabilizar
+- CALL FUNCTION 'BAPI_ACC_DOCUMENT_POST'
+- Verificar return:
+  * Buscar type='S', id='RW', number='605' para exito
+  * Extraer numero documento de message_v2(10)
+  * Extraer ejercicio de message_v2+14(4)
+
+Paso 4: Confirmar o Revertir
+- Si exito: CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+- Si error: CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'
+
+RESUMEN DE FUNCTION MODULES POR PROGRAMA
+=========================================
+
+ZFIR00426 - Facturacion PUJ:
+- BAPI_ACC_DOCUMENT_CHECK - Validacion previa
+- BAPI_ACC_DOCUMENT_POST - Contabilizacion
+- BAPI_TRANSACTION_COMMIT - Confirmacion
+- BAPI_TRANSACTION_ROLLBACK - Reversion en caso de error
+
+ZFIR00442 - Facturacion Agrupada:
+- BAPI_ACC_DOCUMENT_CHECK - Validacion previa
+- BAPI_ACC_DOCUMENT_POST - Contabilizacion
+- BAPI_TRANSACTION_COMMIT - Confirmacion
+- BAPI_TRANSACTION_ROLLBACK - Reversion en caso de error
+
+ZFI_MOD_FACT - Modificacion de Facturas:
+- Z_UPDATE_DOCUMENT - Modificacion de documentos ya contabilizados
+- No usa BAPI_ACC_DOCUMENT_POST (solo para documentos nuevos)
+
+Z_GRABAR_FICHERO_SERV
+- Uso: Grabacion de archivos en servidor
+- Programas que la usan: ZFIR00445 (Generacion XML Dominicana)
+- Funcion: Guarda archivos XML en rutas del servidor
+
+Z_OBTENER_RUTAS_INT_SALIDA
+- Uso: Obtiene rutas productivas para interfaces
+- Programas que la usan: ZFIR00445
+- Retorna: Rutas de servidor para archivos productivos
+
+Z_OBTENER_RUTAS_INT_TEST
+- Uso: Obtiene rutas de prueba para interfaces
+- Programas que la usan: ZFIR00445
+- Retorna: Rutas de servidor para archivos de prueba
+
+FLUJOS DE PROCESO PRINCIPALES
+==============================
+
+FLUJO DE CONTABILIZACION DE FACTURAS:
+1. ZFI_ENVIABLE - Prepara documentos enviables
+2. ZFI_ENVIABLE_UPD - Actualiza estado de documentos
+3. ZFIR00426 o ZFIR00442 - Contabiliza facturas (usa BAPI_ACC_DOCUMENT_POST)
+4. ZFI_MOD_FACT - Si hay errores, modifica facturas (usa Z_UPDATE_DOCUMENT)
+
+FLUJO REPUBLICA DOMINICANA:
+1. ZFIR00426 - Contabiliza facturas PUJ (limite 250k DOP)
+2. ZFIR00427 - Reporte de facturas PUJ procesadas
+3. ZFIR00442 - Agrupa facturas para optimizacion fiscal
+4. ZFIR00443 - Reporte de facturas agrupadas
+5. ZFIR00445 - Genera XMLs fiscales (CRITICO - antes dia 3 de cada mes)
+6. ZFIR00448 - Monitor de XMLs generados
+
+FLUJO DE PAGOS:
+1. ZFI_PAYMENTS_XML - Procesa pagos XML
+2. Contabilizacion automatica de pagos
+
+FLUJO DE MODIFICACION:
+1. ZFI_MOD_FACT - Usuario introduce parametros
+2. Z_UPDATE_DOCUMENT - Modifica tablas BKPF/BSEG
+3. zcl_log_contable=>add_document_log - Registra cambio en auditoria
+
+CASOS DE USO DETALLADOS
+========================
+
+CASO 1: CONTABILIZAR FACTURAS PUJ DOMINICANAS
+Pregunta: "¿Como contabilizo facturas PUJ de Republica Dominicana?"
+Respuesta: 
+1. Usa ZFIR00426 - Facturacion PUJ Limite 250k DOP
+2. Introduce fecha contable y sociedad
+3. El programa valida que las facturas no superen 250,000 DOP
+4. Agrupa facturas si es necesario
+5. Contabiliza usando BAPI_ACC_DOCUMENT_POST
+6. Verifica resultados en ZFIR00427
+
+CASO 2: MODIFICAR FACTURA YA CONTABILIZADA
+Pregunta: "¿Como corrijo un error en una factura ya contabilizada?"
+Respuesta:
+1. Usa ZFI_MOD_FACT - Modificacion de Facturas
+2. Introduce: numero documento (pa_belnr), sociedad (pa_bukrs), ejercicio (pa_gjahr)
+3. Especifica campo a modificar (pa_bkcam para BKPF o pa_bgcam para BSEG)
+4. Introduce nuevo valor (pa_bkval o pa_bgval)
+5. Ejecuta - El programa usa Z_UPDATE_DOCUMENT para modificar
+6. Se registra en auditoria automaticamente
+7. IMPORTANTE: Solo usuarios autorizados, riesgo alto
+
+CASO 3: GENERAR XML FISCAL DOMINICANO
+Pregunta: "¿Como genero los XMLs fiscales para Republica Dominicana?"
+Respuesta:
+1. Usa ZFIR00445 - Generacion XML Dominicana (CRITICO)
+2. Ejecutar ANTES del dia 3 de cada mes
+3. El programa genera XMLs para cumplimiento DGII
+4. Usa z_grabar_fichero_serv para guardar en servidor
+5. Usa z_obtener_rutas_int_salida para rutas productivas
+6. Verifica con ZFIR00448 - Monitor Ficheros XML
+7. Si no se ejecuta a tiempo: sanciones fiscales
+
+CASO 4: PROCESAR PAGOS XML
+Pregunta: "¿Como proceso pagos recibidos en XML?"
+Respuesta:
+1. Usa ZFI_PAYMENTS_XML - Procesamiento de Pagos XML
+2. El programa lee archivos XML de pagos
+3. Valida y procesa los pagos
+4. Contabiliza automaticamente
+5. Genera logs de procesamiento
+
+CASO 5: OPTIMIZAR FACTURACION FISCAL
+Pregunta: "¿Como optimizo la facturacion para cumplimiento fiscal?"
+Respuesta:
+1. Usa ZFIR00442 - Facturacion Agrupada
+2. El programa agrupa facturas relacionadas
+3. Contabiliza de forma optimizada
+4. Verifica resultados con ZFIR00443
+5. Reduce numero de documentos contables
+
+CASO 6: PREPARAR DOCUMENTOS PARA CONTABILIZAR
+Pregunta: "¿Como preparo documentos antes de contabilizar?"
+Respuesta:
+1. Usa ZFI_ENVIABLE - Gestion de Documentos Enviables
+2. Marca documentos como enviables
+3. Usa ZFI_ENVIABLE_UPD para actualizar estados
+4. Luego ejecuta programa de contabilizacion (ZFIR00426, etc.)
+
 FUNCIONALIDADES PRINCIPALES POR PROGRAMA
 ========================================
 
 GESTION DE FACTURAS:
-- zfi_enviable/ - Gestion de documentos enviables
-- zfi_enviable_upd/ - Actualizacion de documentos enviables
-- zfi_mod_fact/ - Modificacion de facturas
-- ZFIR00426 - Facturacion PUJ Limite 250k DOP
-- ZFIR00442 - Facturacion Agrupada
+- zfi_enviable/ - Gestion de documentos enviables (preparacion)
+- zfi_enviable_upd/ - Actualizacion de documentos enviables (actualizacion estado)
+- zfi_mod_fact/ - Modificacion de facturas (correccion errores, usa Z_UPDATE_DOCUMENT)
+- ZFIR00426 - Facturacion PUJ Limite 250k DOP (contabilizacion, usa BAPI_ACC_DOCUMENT_POST)
+- ZFIR00442 - Facturacion Agrupada (optimizacion fiscal, usa BAPI_ACC_DOCUMENT_POST)
 - ZCL_FI_INVOICE_SERVICE - Servicio de procesamiento de facturas (planificado)
 
 GESTION DE PAGOS:
 - zfi_bp_envio/ - Envio de business partners
-- zfi_payments_xml/ - Procesamiento de pagos XML
+- zfi_payments_xml/ - Procesamiento de pagos XML (contabilizacion automatica)
 - ZCL_FI_PAYMENT_PROCESSOR - Procesador de pagos (planificado)
 
 INTEGRACIONES AZURE:
@@ -369,10 +733,142 @@ FORMULARIOS E IMPRESION:
 
 UTILIDADES GENERALES:
 - zarr00171/ - Utilidad general 171
-- zarr00172/ - Utilidad general 172
+- zarr00172/ - Utilidad general 172 (usa Z_UPDATE_DOCUMENT para actualizar XREF1_HD)
 - zarr00173/ - Utilidad general 173
 - zutr00024/ - Utilidad de transporte 024
 - zutr00025/ - Utilidad de transporte 025
+
+PROGRAMAS QUE CONTABILIZAN FACTURAS - LISTADO COMPLETO
+=======================================================
+
+RESPUESTA DIRECTA: Los programas que contabilizan facturas son:
+1. ZFIR00426 - Facturacion PUJ Limite 250k DOP
+2. ZFIR00442 - Facturacion Agrupada
+3. ZFI_MOD_FACT - Modificacion de Facturas (modifica facturas ya contabilizadas)
+
+DETALLE POR PROGRAMA:
+
+CONTABILIZACION DIRECTA DE FACTURAS (Usan BAPI_ACC_DOCUMENT_POST):
+--------------------------------------------------------------------
+
+1. ZFIR00426 - Facturacion PUJ Limite 250k DOP
+   - Ubicacion: 02_Reports/zfir00426/
+   - Funcion: Contabiliza facturas PUJ respetando limite fiscal de 250,000 DOP
+   - Function Module: BAPI_ACC_DOCUMENT_POST
+   - Function Modules adicionales:
+     * BAPI_ACC_DOCUMENT_CHECK - Validacion previa
+     * BAPI_TRANSACTION_COMMIT - Confirmacion
+     * BAPI_TRANSACTION_ROLLBACK - Reversion en caso de error
+   - Tablas utilizadas: BKPF, BSEG, ZFI00426_INVOICE
+   - Parametros principales: Fecha contable (pa_budat), sociedad (pa_bukrs)
+   - Proyecto: Republica Dominicana
+   - Criticidad: ALTA
+   - Cuando usar: Mensualmente para contabilizar facturas PUJ de Republica Dominicana
+   - Flujo: Lee facturas -> Valida limite 250k DOP -> Agrupa si necesario -> Contabiliza
+
+2. ZFIR00442 - Facturacion Agrupada
+   - Ubicacion: 02_Reports/zfir00442/
+   - Funcion: Agrupa facturas antes de contabilizar para optimizacion fiscal
+   - Function Module: BAPI_ACC_DOCUMENT_POST
+   - Function Modules adicionales:
+     * BAPI_ACC_DOCUMENT_CHECK - Validacion previa
+     * BAPI_TRANSACTION_COMMIT - Confirmacion
+     * BAPI_TRANSACTION_ROLLBACK - Reversion en caso de error
+   - Complejidad: Alta (8 dictionary objects)
+   - Proyecto: Republica Dominicana
+   - Criticidad: ALTA
+   - Cuando usar: Para optimizar contabilizacion agrupando facturas relacionadas
+   - Flujo: Agrupa facturas -> Valida -> Contabiliza grupo optimizado
+
+MODIFICACION DE FACTURAS YA CONTABILIZADAS (Usa Z_UPDATE_DOCUMENT):
+--------------------------------------------------------------------
+
+3. ZFI_MOD_FACT - Modificacion de Facturas
+   - Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_mod_fact/
+   - Funcion: Modifica facturas ya contabilizadas
+   - Function Module: Z_UPDATE_DOCUMENT (personalizado)
+   - Tablas modificadas: BKPF, BSEG (tablas estandar SAP)
+   - Parametros: pa_belnr (numero documento), pa_bukrs (sociedad), pa_gjahr (ejercicio)
+   - Campos modificables: Cualquier campo de BKPF o BSEG de forma dinamica
+   - Riesgo: ALTO - Modifica tablas contables estandar
+   - Auditoria: Implementa zcl_log_contable=>add_document_log
+   - Cuando usar: Para corregir errores en facturas ya contabilizadas
+   - IMPORTANTE: Solo usuarios autorizados, requiere autorizacion especial
+
+PREPARACION PARA CONTABILIZACION (No contabilizan directamente):
+-----------------------------------------------------------------
+
+4. ZFI_ENVIABLE - Gestion de Documentos Enviables
+   - Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_enviable/
+   - Funcion: Prepara documentos para contabilizacion
+   - Cuando usar: Antes de ejecutar programas de contabilizacion
+   - Relacionado con: ZFI_ENVIABLE_UPD, ZFIR00426, ZFIR00442
+
+5. ZFI_ENVIABLE_UPD - Actualizacion de Documentos Enviables
+   - Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_enviable_upd/
+   - Funcion: Actualiza estado de documentos antes de contabilizar
+   - Cuando usar: Para actualizar estado de documentos enviables
+   - Relacionado con: ZFI_ENVIABLE
+
+CONTABILIZACION DE PAGOS (Relacionado con facturas):
+-----------------------------------------------------
+
+6. ZFI_PAYMENTS_XML - Procesamiento de Pagos XML
+   - Ubicacion: 01_Programas_Principales/FI_Finanzas/Pagos/zfi_payments_xml/
+   - Funcion: Procesa y contabiliza pagos en formato XML
+   - Tipo: Contabilizacion de pagos (no facturas directamente)
+   - Archivos: 20 archivos (5 .txt + 15 .html)
+   - Cuando usar: Para procesar pagos recibidos en formato XML
+
+7. ZFI_OPTIGEST_ANULA - Anulacion de Documentos Optigest
+   - Ubicacion: 01_Programas_Principales/FI_Finanzas/zfi_optigest_anula/
+   - Funcion: Anula documentos contables en Optigest
+   - Tipo: Contabilizacion de anulaciones
+   - Archivos: 18 archivos (11 .txt + 7 .html)
+   - Cuando usar: Para anular documentos contables de Optigest
+
+REPORTS DE FACTURACION (Pueden incluir funcionalidad de contabilizacion):
+---------------------------------------------------------------------------
+
+8. ZFIR00425 - Report 425
+   - Ubicacion: 02_Reports/zfir00425/
+   - Tipo: Report de facturacion
+   - Estado: Implementado
+
+9. ZFIR00427 - Facturacion PUJ Reporting
+   - Ubicacion: 02_Reports/zfir00427/
+   - Funcion: Analisis y reporting de facturacion PUJ
+   - Relacionado con: ZFIR00426 (reporte de facturas ya contabilizadas)
+   - Estado: Implementado
+
+10. ZFIR00428 - Report 428
+    - Ubicacion: 02_Reports/zfir00428/
+    - Tipo: Report de facturacion
+    - Estado: Implementado
+
+11. ZFIR00443 - Facturacion Agrupada Reporting
+    - Ubicacion: 02_Reports/zfir00443/
+    - Funcion: Analisis y reporting de facturacion agrupada
+    - Relacionado con: ZFIR00442 (reporte de facturas ya contabilizadas)
+    - Estado: Implementado
+
+RESUMEN RAPIDO:
+==============
+
+Programas que CONTABILIZAN facturas directamente (3):
+- ZFIR00426 - Usa BAPI_ACC_DOCUMENT_POST
+- ZFIR00442 - Usa BAPI_ACC_DOCUMENT_POST
+- ZFI_MOD_FACT - Usa Z_UPDATE_DOCUMENT (modifica facturas ya contabilizadas)
+
+Programas que PREPARAN para contabilizacion (2):
+- ZFI_ENVIABLE
+- ZFI_ENVIABLE_UPD
+
+Programas que contabilizan PAGOS relacionados (2):
+- ZFI_PAYMENTS_XML
+- ZFI_OPTIGEST_ANULA
+
+Total: 7 programas principales que contabilizan (3 directos + 2 preparacion + 2 pagos)
 
 ESTADISTICAS DE LA BIBLIOTECA
 =============================
@@ -387,36 +883,75 @@ ESTADISTICAS DE LA BIBLIOTECA
 - Documentos tecnicos: 25+
 - Programas proyecto Dominicana: 12
 
-CASOS DE USO COMUNES
-===================
+EJEMPLOS DE PREGUNTAS Y RESPUESTAS
+===================================
 
-PARA BUSCAR UN PROGRAMA DE FACTURAS:
-"Busca programas relacionados con facturas"
-Respuesta: zfi_enviable, zfi_mod_fact, ZFIR00426, ZFIR00442, ZCL_FI_INVOICE_SERVICE
+PREGUNTA: "¿Que programas contabilizan facturas?"
+RESPUESTA: Hay 3 programas principales que contabilizan facturas:
+1. ZFIR00426 - Facturacion PUJ Limite 250k DOP (usa BAPI_ACC_DOCUMENT_POST)
+2. ZFIR00442 - Facturacion Agrupada (usa BAPI_ACC_DOCUMENT_POST)
+3. ZFI_MOD_FACT - Modificacion de Facturas (usa Z_UPDATE_DOCUMENT para modificar facturas ya contabilizadas)
 
-PARA BUSCAR INTEGRACIONES CON AZURE:
-"¿Que programas tenemos para Azure?"
-Respuesta: ZFI_AZURE_PDF_UPLOAD, ZCL_AZURE_GATEWAY (planificado)
+Adicionalmente hay 2 programas que preparan documentos para contabilizacion:
+- ZFI_ENVIABLE - Gestion de documentos enviables
+- ZFI_ENVIABLE_UPD - Actualizacion de documentos enviables
 
-PARA BUSCAR PROCESAMIENTO DE EXCEL:
-"¿Como proceso archivos Excel?"
-Respuesta: Libreria completa de 56 clases Excel: ZCL_EXCEL, ZCL_EXCEL_WORKSHEET, etc.
+Y 2 programas que contabilizan pagos relacionados:
+- ZFI_PAYMENTS_XML - Procesamiento de pagos XML
+- ZFI_OPTIGEST_ANULA - Anulacion de documentos
 
-PARA BUSCAR WEBSERVICES:
-"¿Que webservices tenemos?"
-Respuesta: zfi_guest_ws_get/post, zfi_guitart_ws_get/post, zfi_ws_get
+Los programas principales usan BAPI_ACC_DOCUMENT_POST para crear documentos contables nuevos. ZFI_MOD_FACT usa Z_UPDATE_DOCUMENT para modificar documentos ya contabilizados.
 
-PARA BUSCAR MONITORES:
-"¿Que monitores financieros hay?"
-Respuesta: zfi_monitor_0002, zfi_monitor_0003, zfi_monitor_0004
+PREGUNTA: "Lista de programas que contabilizan facturas"
+RESPUESTA: Ver seccion "PROGRAMAS QUE CONTABILIZAN FACTURAS - LISTADO COMPLETO". Los 3 principales son: ZFIR00426, ZFIR00442, ZFI_MOD_FACT.
 
-PARA BUSCAR LOGS:
-"¿Donde estan los logs?"
-Respuesta: zfi_faven_log, zfi_procesa_log, zfi_i337_log, zfi_inven_log, zfi_voxel_log
+PREGUNTA: "Programas de contabilizacion"
+RESPUESTA: Los programas que contabilizan facturas son ZFIR00426, ZFIR00442 y ZFI_MOD_FACT. Ver seccion completa para detalles.
 
-PARA PROYECTO DOMINICANA:
-"¿Que programas tenemos para Republica Dominicana?"
-Respuesta: 12 programas ZFIR00426-ZFIR00453, siendo ZFIR00445 el mas critico
+PREGUNTA: "¿Cuales son los programas de contabilizacion?"
+RESPUESTA: Los programas de contabilizacion de facturas son: ZFIR00426 (Facturacion PUJ), ZFIR00442 (Facturacion Agrupada), ZFI_MOD_FACT (Modificacion). Todos los detalles en seccion "PROGRAMAS QUE CONTABILIZAN FACTURAS".
+
+PREGUNTA: "¿Como contabilizo facturas PUJ de Republica Dominicana?"
+RESPUESTA: Usa ZFIR00426 - Facturacion PUJ Limite 250k DOP. Introduce fecha contable y sociedad. El programa valida limite fiscal de 250,000 DOP, agrupa si es necesario, y contabiliza usando BAPI_ACC_DOCUMENT_POST. Ubicacion: 02_Reports/zfir00426/
+
+PREGUNTA: "¿Como modifico una factura ya contabilizada?"
+RESPUESTA: Usa ZFI_MOD_FACT - Modificacion de Facturas. Introduce numero documento, sociedad y ejercicio. Especifica campo a modificar y nuevo valor. El programa usa Z_UPDATE_DOCUMENT para modificar tablas BKPF/BSEG. IMPORTANTE: Solo usuarios autorizados, riesgo alto. Ubicacion: 01_Programas_Principales/FI_Finanzas/Facturas_y_Abonos/zfi_mod_fact/
+
+PREGUNTA: "¿Que BAPI se usa para contabilizar?"
+RESPUESTA: BAPI_ACC_DOCUMENT_POST es la BAPI principal para contabilizar documentos. La usan ZFIR00426 y ZFIR00442. Retorna numero de documento, ejercicio y mensajes de error.
+
+PREGUNTA: "¿Que funcion modifica documentos contables?"
+RESPUESTA: Z_UPDATE_DOCUMENT modifica documentos contables ya creados. La usan ZFI_MOD_FACT y ZARR00172. Modifica tablas BKPF y BSEG. Tiene auditoria implementada.
+
+PREGUNTA: "¿Como genero XMLs fiscales para Dominicana?"
+RESPUESTA: Usa ZFIR00445 - Generacion XML Dominicana. CRITICO: Ejecutar antes del dia 3 de cada mes. Genera XMLs para cumplimiento DGII. Usa z_grabar_fichero_serv y z_obtener_rutas_int_salida. Verifica con ZFIR00448.
+
+PREGUNTA: "¿Que programas hay para Azure?"
+RESPUESTA: ZFI_AZURE_PDF_UPLOAD para subida de PDFs a Azure. ZCL_AZURE_GATEWAY esta planificado.
+
+PREGUNTA: "¿Como proceso archivos Excel?"
+RESPUESTA: Hay 56 clases Excel implementadas. ZCL_EXCEL es la clase principal, ZCL_EXCEL_WORKSHEET gestiona hojas, ZCL_EXCEL_GRAPH_* para graficos, ZCL_EXCEL_AUTOFILTER para filtros.
+
+PREGUNTA: "¿Que webservices tenemos?"
+RESPUESTA: zfi_guest_ws_get/post para huespedes, zfi_guitart_ws_get/post para Guitart, zfi_ws_get generico.
+
+PREGUNTA: "¿Que monitores financieros hay?"
+RESPUESTA: zfi_monitor_0002, zfi_monitor_0003, zfi_monitor_0004.
+
+PREGUNTA: "¿Donde estan los logs?"
+RESPUESTA: zfi_faven_log, zfi_procesa_log, zfi_i337_log, zfi_inven_log, zfi_voxel_log.
+
+PREGUNTA: "¿Que programas tenemos para Republica Dominicana?"
+RESPUESTA: 12 programas ZFIR00426-ZFIR00453. ZFIR00445 (Generacion XML) es el mas critico - debe ejecutarse antes del dia 3 de cada mes.
+
+PREGUNTA: "¿Cual es el flujo para contabilizar facturas?"
+RESPUESTA: 1) ZFI_ENVIABLE prepara documentos, 2) ZFI_ENVIABLE_UPD actualiza estados, 3) ZFIR00426 o ZFIR00442 contabiliza con BAPI_ACC_DOCUMENT_POST, 4) Si hay errores, ZFI_MOD_FACT modifica con Z_UPDATE_DOCUMENT.
+
+PREGUNTA: "¿Que tablas modifica Z_UPDATE_DOCUMENT?"
+RESPUESTA: Modifica BKPF (cabecera documentos) y BSEG (posiciones documentos), que son tablas estandar SAP. Por eso tiene riesgo alto.
+
+PREGUNTA: "¿Cuales son los programas mas criticos?"
+RESPUESTA: ZFIR00426 (Facturacion PUJ), ZFIR00442 (Facturacion Agrupada), ZFIR00445 (Generacion XML - CRITICO antes dia 3), ZFI_MOD_FACT (Modificacion - riesgo alto).
 
 INFORMACION PARA DESARROLLADORES
 ================================
@@ -431,7 +966,8 @@ DOCUMENTACION TECNICA:
 - README_ESTRUCTURA_CLASES.md - Guia de estructura de clases
 - CONVENCIONES_NOMENCLATURA_CLASES.md - Convenciones de nomenclatura
 - INICIO_RAPIDO.md - Guia de inicio rapido
-- Manual de uso.docx - Manual de uso general
+- LISTADO_PROGRAMAS_CONTABILIZACION_FACTURAS.md - Listado programas contabilizacion
+- PROGRAMAS_QUE_USAN_Z_UPDATE_DOCUMENT.md - Programas que modifican documentos
 
 HERRAMIENTAS DE DESARROLLO:
 - buscador_programas.md - Herramienta de busqueda
@@ -458,17 +994,23 @@ PRIORIDAD MEDIA:
 CONTACTO Y MANTENIMIENTO
 =======================
 Desarrollador: Santiago Jarouge
-Cliente: W2M
-Fecha ultima actualizacion: 28/01/2025
+Fecha ultima actualizacion: 21/11/2025
 Estado documentacion: Completa para programas principales
-Ubicacion biblioteca: C:\Users\sjaro\OneDrive\W2M\03 Biblioteca
+Ubicacion biblioteca: C:\Users\sjaro\OneDrive\03 Biblioteca
 
 NOTAS IMPORTANTES PARA EL BOT
 =============================
 - Siempre mencionar si un programa esta implementado o planificado
 - Para Excel, destacar que hay 56 clases ya implementadas
-- Para Dominicana, mencionar que ZFIR00445 es CRITICO
+- Para Dominicana, mencionar que ZFIR00445 es CRITICO y debe ejecutarse antes del dia 3
+- Para contabilizacion, mencionar BAPI_ACC_DOCUMENT_POST y Z_UPDATE_DOCUMENT
+- Para modificacion de facturas, mencionar riesgo alto y necesidad de autorizacion
+- Mencionar flujos de proceso cuando sea relevante
+- Incluir parametros principales cuando se pregunte por un programa
+- Mencionar tablas y function modules utilizados
 - Sugerir usar plantillas para nuevos desarrollos
 - Recomendar seguir convenciones de nomenclatura
 - Mencionar ubicacion en estructura de carpetas
 - Destacar funcionalidades principales de cada programa
+- Explicar cuando usar cada programa (casos de uso)
+- Mencionar programas relacionados y dependencias
