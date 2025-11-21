@@ -282,9 +282,17 @@ with st.sidebar:
     st.subheader("📂 Ubicación de la Biblioteca")
     # Intentar detectar la ruta automáticamente
     script_dir = Path(__file__).parent.absolute()
-    parent_dir = script_dir.parent
-    # Buscar la biblioteca en el directorio padre
-    default_path = str(parent_dir) if (parent_dir / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists() else str(parent_dir)
+    repo_root = script_dir.parent
+    
+    # Buscar biblioteca en el mismo repositorio (si está subida)
+    # O en el directorio padre (si está en local)
+    if (repo_root / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
+        default_path = str(repo_root)
+    elif (repo_root.parent / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt').exists():
+        default_path = str(repo_root.parent)
+    else:
+        # Ruta por defecto (Windows típico)
+        default_path = r"C:\Users\sjaro\OneDrive\W2M\03 Biblioteca"
     
     library_path = st.text_input(
         "Ruta de la biblioteca:",
