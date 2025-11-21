@@ -65,27 +65,39 @@ def index_library(base_path: str) -> Tuple[Dict, int]:
     if not base.exists():
         raise FileNotFoundError(f"La ruta {base_path} no existe")
     
-    # Archivos principales a indexar
-    important_files = [
-        'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt',
+    # Archivo principal - BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt (muy importante)
+    main_file = base / 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt'
+    if main_file.exists():
+        content = load_text_file(main_file)
+        knowledge_base['files'].append({
+            'path': 'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt',
+            'content': content,
+            'type': 'documentation'
+        })
+        indexed_count += 1
+        # Este archivo es tan completo que podemos extraer información de programas de él
+        _extract_programs_from_knowledge_file(content, knowledge_base)
+    
+    # Archivos adicionales opcionales
+    additional_files = [
         'README_NUEVA_ESTRUCTURA.md',
         'ESTRUCTURA_BIBLIOTECA_ORGANIZADA.md',
         'INDICE_BIBLIOTECA_ORGANIZADA.md'
     ]
     
-    # Indexar archivos principales en la raíz
-    for filename in important_files:
+    # Indexar archivos adicionales si existen
+    for filename in additional_files:
         file_path = base / filename
         if file_path.exists():
             content = load_text_file(file_path)
             knowledge_base['files'].append({
-                'path': str(file_path.relative_to(base)),
+                'path': filename,
                 'content': content,
                 'type': 'documentation'
             })
             indexed_count += 1
     
-    # Indexar documentación técnica
+    # Indexar documentación técnica (opcional - solo si existe)
     doc_path = base / '07_Documentacion_Tecnica'
     if doc_path.exists():
         for file_path in doc_path.rglob('*.md'):
@@ -102,7 +114,7 @@ def index_library(base_path: str) -> Tuple[Dict, int]:
             except Exception as e:
                 continue
     
-    # Indexar archivos de programas (solo .txt principales)
+    # Indexar archivos de programas (opcional - solo si existe la carpeta)
     programs_path = base / '01_Programas_Principales'
     if programs_path.exists():
         for file_path in programs_path.rglob('*.txt'):
@@ -126,7 +138,7 @@ def index_library(base_path: str) -> Tuple[Dict, int]:
                 except Exception as e:
                     continue
     
-    # Indexar reports
+    # Indexar reports (opcional - solo si existe la carpeta)
     reports_path = base / '02_Reports'
     if reports_path.exists():
         for folder in reports_path.iterdir():
@@ -146,6 +158,52 @@ def index_library(base_path: str) -> Tuple[Dict, int]:
                         continue
     
     return knowledge_base, indexed_count
+
+
+def _extract_programs_from_knowledge_file(content: str, knowledge_base: Dict):
+    """Extrae información de programas del archivo BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt"""
+    import re
+    
+    # Buscar nombres de programas (patrones como ZFI_*, ZFIR*, etc.)
+    program_patterns = [
+        r'\b(ZFI[A-Z_0-9]+)\b',
+        r'\b(ZFIR[A-Z_0-9]+)\b',
+        r'\b(ZFII[A-Z_0-9]+)\b',
+        r'\b(ZARR[A-Z_0-9]+)\b',
+        r'\b(ZUTR[A-Z_0-9]+)\b',
+        r'\b(ZCL_[A-Z_0-9]+)\b',
+    ]
+    
+    found_programs = set()
+    for pattern in program_patterns:
+        matches = re.findall(pattern, content, re.IGNORECASE)
+        found_programs.update(m.upper() for m in matches)
+    
+    # Extraer información contextual de cada programa
+    for program_name in found_programs:
+        # Buscar secciones que mencionen este programa
+        program_sections = []
+        lines = content.split('\n')
+        current_section = []
+        in_program_section = False
+        
+        for i, line in enumerate(lines):
+            if program_name.upper() in line.upper():
+                in_program_section = True
+                # Capturar contexto alrededor (10 líneas antes y después)
+                start = max(0, i - 10)
+                end = min(len(lines), i + 10)
+                context = '\n'.join(lines[start:end])
+                program_sections.append(context)
+        
+        if program_sections:
+            # Combinar toda la información del programa
+            program_info = '\n'.join(program_sections)
+            knowledge_base['programs'][program_name] = {
+                'path': f'BIBLIOTECA_W2M_CONOCIMIENTO_BOT.txt',
+                'content': program_info[:5000],  # Primeros 5000 caracteres
+                'folder': 'Biblioteca Principal'
+            }
 
 
 def search_in_content(query: str, knowledge_base: Dict) -> List[Dict]:
