@@ -35,7 +35,7 @@ st.markdown("---")
 if 'knowledge_base' not in st.session_state:
     st.session_state.knowledge_base = None
 if 'indexed_files' not in st.session_state:
-    st.session_state.indexed_files = []
+    st.session_state.indexed_files = 0  # Cambiado de [] a 0 (entero)
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
